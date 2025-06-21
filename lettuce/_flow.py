@@ -247,6 +247,34 @@ class Flow(ABC):
         if self.context.use_native:
             self._f_next = self.context.empty_tensor(self.f.shape)
 
+    def interpolate_on_border(self, coarse_values: torch.Tensor):
+        # interpolate position between b and c
+        interpolate_4 = lambda a, b, c, d: (9/16)*(b + c) - (1/16)*(a + d)
+        # interpolate position between a and b
+        interpolate_3 = lambda a, b, c: (3/8)*a + (3/4)*b - (1/8)*c
+        interpolated_values = torch.zeros(coarse_values.size(dim=0), coarse_values.size(dim=1) - 1)
+        interpolated_values[:, 0] = interpolate_3(coarse_values[:, 0], coarse_values[:, 1], coarse_values[:, 2])
+        interpolated_values[:, -1] = interpolate_3(coarse_values[:, -1], coarse_values[:, -2], coarse_values[:, -3])
+        for i in range(1, interpolated_values.size(dim=1) - 1):
+            interpolated_values[:, i] = interpolate_4(coarse_values[:, i-1], coarse_values[:, i], coarse_values[:, i+1], coarse_values[:, i+2])
+
+        return interpolated_values
+
+    def interpolate_borders(self):
+        """
+        if this flow is 'fine' in terms of grid refinement, on the border we need to interpolate every position,
+        that does not have a counterpart on the coarse grid.
+        """
+        # TODO abhängig machen von dimension, das ist der 2D Fall
+        # left side
+        self.f_next[:,0,1::2] = self.interpolate_on_border(self.f_next[:,0,::2])
+        # right side
+        self.f_next[:,-1,1::2] = self.interpolate_on_border(self.f_next[:,-1,::2])
+        # top side
+        self.f_next[:,1::2,0] = self.interpolate_on_border(self.f_next[:,::2,0])
+        # bottom side
+        self.f_next[:,1::2,-1] = self.interpolate_on_border(self.f_next[:,::2,-1])
+        return
 
 def pressure_poisson(units: 'UnitConversion', u, rho0, tol_abs=1e-10,
                      max_num_steps=100000):

@@ -46,9 +46,13 @@ class Simulation:
     no_collision_mask: Optional[torch.Tensor]
     no_streaming_mask: Optional[torch.Tensor]
     reporter: List['Reporter']
+    fine_simulation: Optional['Simulation']
+    # offset not needed?
+    fine_border_min: Optional[tuple[int]]
+    fine_border_max: Optional[tuple[int]]
 
     def __init__(self, flow: 'Flow', collision: 'Collision',
-                 reporter: List['Reporter']):
+                 reporter: List['Reporter'], child_simulation: Optional['Simulation'] = None, child_offset: Optional[List[int]] = None):
         self.flow = flow
         self.flow.collision = collision
         self.context = flow.context
@@ -56,6 +60,19 @@ class Simulation:
         self.reporter = reporter
         self.boundaries = ([None]
                            + sorted(flow.boundaries, key=lambda b: str(b)))
+
+        if child_simulation is not None:
+            self.fine_simulation = child_simulation
+            self.fine_border_min = self.transform_to_coarse([0] * self.fine_simulation.flow.stencil.d, child_offset)
+            max_coords_fine = []
+            size_fine = self.fine_simulation.flow.f.size()
+            for i in range(self.fine_simulation.flow.stencil.d):
+                max_coords_fine.append(size_fine[i+1] + 1)
+            self.fine_border_max = self.transform_to_coarse(max_coords_fine, child_offset)
+        else:
+            self.fine_simulation = None
+            self.fine_border_max = None
+            self.fine_border_min = None
 
         # ==================================== #
         # initialise masks based on boundaries #
@@ -92,6 +109,8 @@ class Simulation:
         def collide_and_stream(*_, **__):
             self._collide()
             self._stream()
+            if self.fine_simulation is None:
+                self.flow.f = self.flow.f_next
 
         self._collide_and_stream = collide_and_stream
 
@@ -164,33 +183,109 @@ class Simulation:
     def _stream(self):
         for i in range(1, self.flow.stencil.q):
             if self.no_streaming_mask is None:
-                self.flow.f[i] = self.__stream(self.flow.f, i,
+                self.flow.f_next[i] = self.__stream(self.flow.f, i,
                                                self.flow.stencil.e,
                                                self.flow.stencil.d)
             else:
                 new_fi = self.__stream(self.flow.f, i, self.flow.stencil.e,
                                        self.flow.stencil.d)
-                self.flow.f[i] = torch.where(torch.eq(
+                self.flow.f_next[i] = torch.where(torch.eq(
                     self.no_streaming_mask[i], 1), self.flow.f[i], new_fi)
-        return self.flow.f
+        return self.flow.f_next
 
     def _collide(self):
         if self.no_collision_mask is None:
-            self.flow.f = self.collision(self.flow)
+            self.flow.f_next = self.collision(self.flow)
             for i, boundary in enumerate(self.boundaries[1:], start=1):
-                self.flow.f = boundary(self.flow)
+                self.flow.f_next = boundary(self.flow.f_next)
         else:
             torch.where(torch.eq(self.no_collision_mask, 0),
                         self.collision(self.flow), self.flow.f,
-                        out=self.flow.f)
+                        out=self.flow.f_next)
             for i, boundary in enumerate(self.boundaries[1:], start=1):
                 torch.where(torch.eq(self.no_collision_mask, i),
-                            boundary(self.flow), self.flow.f, out=self.flow.f)
-        return self.flow.f
+                            boundary(self.flow), self.flow.f, out=self.flow.f_next)
+        return self.flow.f_next
 
     def _report(self):
         for reporter in self.reporter:
             reporter(self)
+
+    def transform_to_coarse(self, index_fine, offset):
+        index = [0] * self.flow.stencil.d
+        for i in range(self.flow.stencil.d):
+            index[i] = int((index_fine[i] / 2) + offset[i])
+        return index
+
+    # auf coarse_grid, fine_grid können auch direkt über das Objekt zugegriffen werden
+    def coarse_to_fine_on_overlap(self, coarse_grid, fine_grid, dimensionality):
+        # TODO schöner schreiben
+        border_slices = list(map(slice, self.fine_border_min, self.fine_border_max))
+
+        match dimensionality:
+            # slice()
+            case 1:
+                fine_grid[:, (0, -1)] = coarse_grid[:, (self.fine_border_min[0], self.fine_border_max[0])]
+            case 2:
+                fine_grid[:, (0, -1), ::2] = coarse_grid[:, (self.fine_border_min[0], self.fine_border_max[0]), border_slices[1]]
+                fine_grid[:, ::2, (0, -1)] = coarse_grid[:, border_slices[0], (self.fine_border_min[1], self.fine_border_max[1])]
+            case 3:
+                # this does not work!
+                fine_grid[:, (0, -1), ::2, ::2] = coarse_grid[:, (self.fine_border_min[0], self.fine_border_max[0]), border_slices[1], border_slices[2]]
+                fine_grid[:, ::2, (0, -1), ::2] = coarse_grid[:, border_slices[0], (self.fine_border_min[1], self.fine_border_max[1]), border_slices[2]]
+                fine_grid[:, ::2, ::2, (0, -1)] = coarse_grid[:, border_slices[0], border_slices[1], (self.fine_border_min[2], self.fine_border_max[2])]
+            case _:
+                print("Impossible state reached in space_interpolation coarse to fine")
+        return
+
+    # not sure about this one:
+    def fine_to_coarse_on_overlap(self, coarse_grid):
+        fine_flow = self.fine_simulation.flow
+        # TODO
+        # this needs to happen somehow:
+        #fneq_filtered = fine_flow.get_fneq_filtered()
+        #fine_grid_restricted_rescaled = fine_flow.equilibrium + (2 * fine_flow.units.viscosity/self.flow.units.viscosity)*fneq_filtered
+        fine_grid_restricted_rescaled = fine_flow
+        slices = [slice(None)]
+        slices += ([slice(start, end) for start, end in zip(self.fine_border_min, self.fine_border_max)])
+        coarse_grid[tuple(slices)] = fine_grid_restricted_rescaled.f_next[:, *(slice(None, None, 2),)*self.flow.stencil.d]
+        return
+
+    def run_once_with_refinement(self):
+        # 1. run parent once:
+        self._collide_and_stream(self)
+
+        # 2. run fine once
+        self.fine_simulation(1)
+        # coarse -> fine
+            # interpolate time
+        # TODO effizienter, indem nur die interpoliert werden die wir auch brauchen
+        coarse_time_interpolated = torch.lerp(self.flow.f, self.flow.f_next, 0.5)
+        self.coarse_to_fine_on_overlap(coarse_time_interpolated, self.fine_simulation.flow.f_next, self.flow.stencil.d)
+
+            # interpolate space
+        self.fine_simulation.flow.interpolate_borders()
+
+        # set f = f_next
+        self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
+
+        # 3. run fine once
+        self.fine_simulation(1)
+        # coarse -> fine
+        self.coarse_to_fine_on_overlap(self.flow.f_next, self.fine_simulation.flow.f_next, self.flow.stencil.d)
+
+        # interpolate space
+        self.fine_simulation.flow.interpolate_borders()
+
+        # set f = f_next
+        self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
+
+        #4. fine -> coarse
+        # Brauchen wir
+        # self.fine_to_coarse_on_overlap(self.flow.f_next)
+
+        self.flow.f = self.flow.f_next
+        return
 
     def __call__(self, num_steps):
         beg = timer()
@@ -199,7 +294,10 @@ class Simulation:
             self._report()
 
         for _ in range(num_steps):
-            self._collide_and_stream(self)
+            if self.fine_simulation is not None:
+                self.run_once_with_refinement()
+            else:
+                self._collide_and_stream(self)
             self.flow.i += 1
             self._report()
 
