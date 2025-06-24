@@ -241,14 +241,13 @@ class Simulation:
     # not sure about this one:
     def fine_to_coarse_on_overlap(self, coarse_grid):
         fine_flow = self.fine_simulation.flow
-        # TODO
-        # this needs to happen somehow:
-        #fneq_filtered = fine_flow.get_fneq_filtered()
-        #fine_grid_restricted_rescaled = fine_flow.equilibrium + (2 * fine_flow.units.viscosity/self.flow.units.viscosity)*fneq_filtered
-        fine_grid_restricted_rescaled = fine_flow
         slices = [slice(None)]
         slices += ([slice(start, end) for start, end in zip(self.fine_border_min, self.fine_border_max)])
-        coarse_grid[tuple(slices)] = fine_grid_restricted_rescaled.f_next[:, *(slice(None, None, 2),)*self.flow.stencil.d]
+
+        f_eq = fine_flow.equilibrium(fine_flow)
+        relaxation_scaled = (2*self.flow.units.relaxation_parameter_lu / fine_flow.units.relaxation_parameter_lu)
+        f_neq = fine_flow.f - f_eq
+        coarse_grid[tuple(slices)] = (f_eq + relaxation_scaled * f_neq)[:, *(slice(None, None, 2),)*self.flow.stencil.d]
         return
 
     def run_once_with_refinement(self):
@@ -281,8 +280,7 @@ class Simulation:
         self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
 
         #4. fine -> coarse
-        # Brauchen wir
-        # self.fine_to_coarse_on_overlap(self.flow.f_next)
+        self.fine_to_coarse_on_overlap(self.flow.f_next)
 
         self.flow.f = self.flow.f_next
         return
