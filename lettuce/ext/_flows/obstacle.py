@@ -55,7 +55,12 @@ class Obstacle(ExtFlow):
                  reynolds_number, mach_number, domain_length_x,
                  char_length=1, char_velocity=1,
                  stencil: Optional[Stencil] = None,
-                 equilibrium: Optional[Equilibrium] = None):
+                 equilibrium: Optional[Equilibrium] = None,
+                 ref_level :int = 0,
+                 start_point = 0, end_point = 0):
+        self.ref_level = ref_level
+        self.start_point = start_point
+        self.end_point = end_point
         self.char_length_lu = resolution[0] / domain_length_x * char_length
         self.char_length = char_length
         self.char_velocity = char_velocity
@@ -100,8 +105,12 @@ class Obstacle(ExtFlow):
 
     @property
     def grid(self):
-        xyz = tuple(self.units.convert_length_to_pu(torch.arange(n)) for n in
-                    self.resolution)
+        if self.ref_level == 0:
+            xyz = tuple(self.units.convert_length_to_pu(torch.arange(n)) for n in
+                        self.resolution)
+        elif self.ref_level == 1:
+            xyz = tuple(map(lambda start, stop: self.units.convert_length_to_pu(torch.arange(start*2 , stop *2 -1)), self.start_point, self.end_point))
+
         return torch.meshgrid(*xyz, indexing='ij')
 
     @property
@@ -120,6 +129,16 @@ class Obstacle(ExtFlow):
             # self, rho_outlet=0),
             BounceBackBoundary(self.mask)
         ]
+    #
+    # def create_fine_flow(self, transform: Transformation, reynolds_number, mach_number, domain_length_x):
+    #     resolution = transform.maximum_fine
+    #     fine_flow = Obstacle(self.context, resolution, reynolds_number, mach_number, domain_length_x, char_length=self.char_length/2)
+    #     fine_flow.mask[transform.coarse_to_fine(self.mask.nonzero())] = True
+    #     return
+    #
+    # def fill_mask(self, mask: torch.Tensor):
+    #     # Lücken in der Maske füllen, vielleicht mittels convolution?
+    #     return
 
     def _unit_vector(self, i=0):
         return torch.eye(self.stencil.d)[i]

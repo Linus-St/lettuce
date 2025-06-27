@@ -47,7 +47,10 @@ reynolds_fine = reynolds_coarse
 mach_fine = mach_coarse
 
 flow_fine = lt.Obstacle(context_fine, [res_fine_x, res_fine_y], reynolds_number=reynolds_fine,
-                          mach_number=mach_fine, domain_length_x=length_fine)
+                          mach_number=mach_fine, domain_length_x=length_fine, ref_level=1, start_point=[80, 40], end_point=[120, 60])
+#TODO überprüfen
+# ich glaube die char_length_lu wird in der Grid schon verwendet, das heißt ich muss das irgendwie vorher schon setzen
+flow_fine.char_length_lu = flow_coarse.char_length_lu * 2 - 1
 
 flow_fine.boundaries[0] = None
 flow_fine.boundaries[1] = None
