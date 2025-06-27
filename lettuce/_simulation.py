@@ -46,13 +46,10 @@ class Simulation:
     no_collision_mask: Optional[torch.Tensor]
     no_streaming_mask: Optional[torch.Tensor]
     reporter: List['Reporter']
-    fine_simulation: Optional['Simulation']
-    # offset not needed?
-    fine_border_min: Optional[tuple[int]]
-    fine_border_max: Optional[tuple[int]]
+    refinement: Optional['Refinement']
 
     def __init__(self, flow: 'Flow', collision: 'Collision',
-                 reporter: List['Reporter'], child_simulation: Optional['Simulation'] = None, child_offset: Optional[List[int]] = None):
+                 reporter: List['Reporter'], refinement: 'Refinement' = None):
         self.flow = flow
         self.flow.collision = collision
         self.context = flow.context
@@ -60,19 +57,7 @@ class Simulation:
         self.reporter = reporter
         self.boundaries = ([None]
                            + sorted(flow.boundaries, key=lambda b: str(b)))
-
-        if child_simulation is not None:
-            self.fine_simulation = child_simulation
-            self.fine_border_min = self.transform_to_coarse([0] * self.fine_simulation.flow.stencil.d, child_offset)
-            max_coords_fine = []
-            size_fine = self.fine_simulation.flow.f.size()
-            for i in range(self.fine_simulation.flow.stencil.d):
-                max_coords_fine.append(size_fine[i+1] + 1)
-            self.fine_border_max = self.transform_to_coarse(max_coords_fine, child_offset)
-        else:
-            self.fine_simulation = None
-            self.fine_border_max = None
-            self.fine_border_min = None
+        self.refinement = refinement
 
         # ==================================== #
         # initialise masks based on boundaries #
@@ -109,7 +94,7 @@ class Simulation:
         def collide_and_stream(*_, **__):
             self._collide()
             self._stream()
-            if self.fine_simulation is None:
+            if self.refinement is None:
                 self.flow.f = self.flow.f_next
 
         self._collide_and_stream = collide_and_stream
@@ -211,76 +196,15 @@ class Simulation:
         for reporter in self.reporter:
             reporter(self)
 
-    def transform_to_coarse(self, index_fine, offset):
-        index = [0] * self.flow.stencil.d
-        for i in range(self.flow.stencil.d):
-            index[i] = int((index_fine[i] / 2) + offset[i])
-        return index
-
-    # auf coarse_grid, fine_grid können auch direkt über das Objekt zugegriffen werden
-    def coarse_to_fine_on_overlap(self, coarse_grid, fine_grid, dimensionality):
-        # TODO schöner schreiben
-        border_slices = list(map(slice, self.fine_border_min, self.fine_border_max))
-
-        match dimensionality:
-            # slice()
-            case 1:
-                fine_grid[:, (0, -1)] = coarse_grid[:, (self.fine_border_min[0], self.fine_border_max[0])]
-            case 2:
-                fine_grid[:, (0, -1), ::2] = coarse_grid[:, (self.fine_border_min[0], self.fine_border_max[0]), border_slices[1]]
-                fine_grid[:, ::2, (0, -1)] = coarse_grid[:, border_slices[0], (self.fine_border_min[1], self.fine_border_max[1])]
-            case 3:
-                # this does not work!
-                fine_grid[:, (0, -1), ::2, ::2] = coarse_grid[:, (self.fine_border_min[0], self.fine_border_max[0]), border_slices[1], border_slices[2]]
-                fine_grid[:, ::2, (0, -1), ::2] = coarse_grid[:, border_slices[0], (self.fine_border_min[1], self.fine_border_max[1]), border_slices[2]]
-                fine_grid[:, ::2, ::2, (0, -1)] = coarse_grid[:, border_slices[0], border_slices[1], (self.fine_border_min[2], self.fine_border_max[2])]
-            case _:
-                print("Impossible state reached in space_interpolation coarse to fine")
-        return
-
-    # not sure about this one:
-    def fine_to_coarse_on_overlap(self, coarse_grid):
-        fine_flow = self.fine_simulation.flow
-        slices = [slice(None)]
-        slices += ([slice(start, end) for start, end in zip(self.fine_border_min, self.fine_border_max)])
-
-        f_eq = fine_flow.equilibrium(fine_flow)
-        relaxation_scaled = (2*self.flow.units.relaxation_parameter_lu / fine_flow.units.relaxation_parameter_lu)
-        f_neq = fine_flow.f - f_eq
-        coarse_grid[tuple(slices)] = (f_eq + relaxation_scaled * f_neq)[:, *(slice(None, None, 2),)*self.flow.stencil.d]
-        return
-
     def run_once_with_refinement(self):
         # 1. run parent once:
         self._collide_and_stream(self)
-
         # 2. run fine once
-        self.fine_simulation(1)
-        # coarse -> fine
-            # interpolate time
-        # TODO effizienter, indem nur die interpoliert werden die wir auch brauchen
-        coarse_time_interpolated = torch.lerp(self.flow.f, self.flow.f_next, 0.5)
-        self.coarse_to_fine_on_overlap(coarse_time_interpolated, self.fine_simulation.flow.f_next, self.flow.stencil.d)
-
-            # interpolate space
-        self.fine_simulation.flow.interpolate_borders()
-
-        # set f = f_next
-        self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
-
+        self.refinement.run_fine_sim(time_interpolation=True)
         # 3. run fine once
-        self.fine_simulation(1)
-        # coarse -> fine
-        self.coarse_to_fine_on_overlap(self.flow.f_next, self.fine_simulation.flow.f_next, self.flow.stencil.d)
-
-        # interpolate space
-        self.fine_simulation.flow.interpolate_borders()
-
-        # set f = f_next
-        self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
-
+        self.refinement.run_fine_sim(time_interpolation=False)
         #4. fine -> coarse
-        self.fine_to_coarse_on_overlap(self.flow.f_next)
+        self.refinement.fine_to_coarse()
 
         self.flow.f = self.flow.f_next
         return
@@ -292,7 +216,7 @@ class Simulation:
             self._report()
 
         for _ in range(num_steps):
-            if self.fine_simulation is not None:
+            if self.refinement is not None:
                 self.run_once_with_refinement()
             else:
                 self._collide_and_stream(self)

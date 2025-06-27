@@ -14,6 +14,8 @@ from ._unit import *
 from ._flow import *
 from ._simulation import *
 
+from ._grid_refinement import *
+
 import lettuce.util
 import lettuce.ext
 

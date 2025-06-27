@@ -265,15 +265,31 @@ class Flow(ABC):
         if this flow is 'fine' in terms of grid refinement, on the border we need to interpolate every position,
         that does not have a counterpart on the coarse grid.
         """
-        # TODO abhängig machen von dimension, das ist der 2D Fall
-        # left side
-        self.f_next[:,0,1::2] = self.interpolate_on_border(self.f_next[:,0,::2])
-        # right side
-        self.f_next[:,-1,1::2] = self.interpolate_on_border(self.f_next[:,-1,::2])
-        # top side
-        self.f_next[:,1::2,0] = self.interpolate_on_border(self.f_next[:,::2,0])
-        # bottom side
-        self.f_next[:,1::2,-1] = self.interpolate_on_border(self.f_next[:,::2,-1])
+        assert(self.stencil.d == 2, "Fehler, Border Interpolation funktioniert nur in 2 D")
+        if self.stencil.d == 2:
+            # left side
+            self.f_next[:,0,1::2] = self.interpolate_on_border(self.f_next[:,0,::2])
+            # right side
+            self.f_next[:,-1,1::2] = self.interpolate_on_border(self.f_next[:,-1,::2])
+            # top side
+            self.f_next[:,1::2,0] = self.interpolate_on_border(self.f_next[:,::2,0])
+            # bottom side
+            self.f_next[:,1::2,-1] = self.interpolate_on_border(self.f_next[:,::2,-1])
+        # TODO
+        # if self.stencil.d == 3:
+        #     # left side
+        #     self.f_next[:, 0, 1::2, 1::2] = self.interpolate_on_border(self.f_next[:, 0, ::2, ::2])
+        #     # right side
+        #     self.f_next[:, -1, 1::2, 1::2] = self.interpolate_on_border(self.f_next[:, -1, ::2, ::2])
+        #     # top side
+        #     self.f_next[:, 1::2, 0, 1::2] = self.interpolate_on_border(self.f_next[:, ::2, 0, ::2])
+        #     # bottom side
+        #     self.f_next[:, 1::2, -1, 1::2] = self.interpolate_on_border(self.f_next[:, ::2, -1, ::2])
+        #     # front side
+        #     self.f_next[:, 1::2, 1::2, 0] = self.interpolate_on_border(self.f_next[:, ::2, ::2, 0])
+        #     # back side
+        #     self.f_next[:, 1::2, 1::2, -1] = self.interpolate_on_border(self.f_next[:, ::2, ::2, 0])
+
         return
 
 def pressure_poisson(units: 'UnitConversion', u, rho0, tol_abs=1e-10,
