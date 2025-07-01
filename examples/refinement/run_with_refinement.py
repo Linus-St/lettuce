@@ -4,7 +4,7 @@ import lettuce as lt
 import matplotlib.pyplot as plt
 import numpy as np
 
-from lettuce import Simulation
+from lettuce import Simulation, VTKReporter
 from lettuce  import Refinement
 
 
@@ -83,6 +83,8 @@ refinement.coarse_simulation = simulation_coarse
 refinement.fine_simulation = simulation_fine
 simulation_coarse.refinement = refinement
 
+# vtk = VTKReporter(filename_base="./data/output/rect_1000_fine")
+# simulation_fine.reporter.append(vtk)
 
 simulation_coarse(1000)
 
