@@ -9,26 +9,58 @@ def get_equilibrium(flow: 'Flow', f: 'Tensor'):
     u = flow.u(f=f, rho=rho)
     return flow.equilibrium(flow=flow, rho=rho, u=u)
 
+class RefinementConfig:
+    refinement_levels: list['Refinement']
+    dimensions_lvl0_pu: np.array
+    resolution_lvl0: np.array
+
+    def __init__(self, physical_dimensions: list[int], resolution: list[int]):
+        self.refinement_levels = []
+        self.dimensions_lvl0_pu = np.array(physical_dimensions)
+        self.resolution_lvl0 = np.array(resolution)
+
+    @property
+    def refinement_level(self):
+        return len(self.refinement_levels)
+
+    def add_refinement(self, start_physical: np.array, end_physical: np.array):
+        self.add_refinement_relative(start_physical / self.dimensions_lvl0_pu[0], end_physical / self.dimensions_lvl0_pu[1])
+        return
+
+    def add_refinement_relative(self, start_relative: np.array, end_relative: np.array):
+        # rint rundet auf den nächsten geraden int (0.5 -> 0, 1.5 -> 2). Mit trunc rundet man immer runter
+        minimum_coarse = minimum_coarse_lvl0 = np.rint(self.resolution_lvl0 * start_relative).astype(int, casting='unsafe')
+        maximum_coarse = maximum_coarse_lvl0 = np.rint(self.resolution_lvl0 * end_relative).astype(int, casting='unsafe')
+        if self.refinement_level != 0:
+            for refinement in self.refinement_levels:
+                minimum_coarse = refinement.transform.coarse_to_fine(minimum_coarse)
+                maximum_coarse = refinement.transform.coarse_to_fine(maximum_coarse)
+        self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, minimum_coarse_lvl0, maximum_coarse_lvl0))
+        return
 
 class Refinement:
     coarse_borders: tuple[tuple[int, int], ...]
     coarse_border_slices: tuple[slice, ...]
-    fine_size: tuple[int, ...]
+    border_length_coarse: tuple[int, ...]
+    minimum_point_lvl0: tuple[int, ...]
+    maximum_point_lvl0: tuple[int, ...]
     transform: Transformation
     coarse_simulation: 'Simulation'
     fine_simulation: 'Simulation'
 
-    def __init__(self, minimum_coarse, maximum_coarse):
+    def __init__(self, minimum_coarse: list[int], maximum_coarse: list[int], minimum_lvl0: tuple[int, ...]=None, maximum_lvl0: tuple[int, ...]=None):
         self.coarse_borders = tuple(map(lambda a, b: tuple((a, b)), minimum_coarse, maximum_coarse))
-        self.coarse_border_slices = tuple(map(lambda a, b: slice(a, b+1), minimum_coarse, maximum_coarse))
-        self.fine_size = tuple(map(lambda a, b: b - a, minimum_coarse, maximum_coarse))
+        # TODO check if b+1 is needed, confusion...
+        self.coarse_border_slices = tuple(map(lambda a, b: slice(a, b), minimum_coarse, maximum_coarse))
+        self.border_length_coarse = tuple(map(lambda a, b: b - a, minimum_coarse, maximum_coarse))
         self.transform = Transformation(np.array(minimum_coarse), np.array(maximum_coarse))
+        self.minimum_point_lvl0 = minimum_lvl0
+        self.maximum_point_lvl0 = maximum_lvl0
 
     def coarse_to_fine(self, coarse_grid, fine_grid):
 
         # TODO schöner schreiben
         match len(self.coarse_borders):
-            # slice()
             case 1:
                 fine_grid[:, (0, -1)] = coarse_grid[:, (self.coarse_borders[0], self.coarse_borders[0])]
             case 2:

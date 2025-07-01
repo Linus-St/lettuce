@@ -57,14 +57,14 @@ class Obstacle(ExtFlow):
                  stencil: Optional[Stencil] = None,
                  equilibrium: Optional[Equilibrium] = None,
                  ref_level :int = 0,
-                 start_point = 0, end_point = 0):
+                 start_point = None, end_point = None):
         self.ref_level = ref_level
-        self.start_point = start_point
-        self.end_point = end_point
         self.char_length_lu = resolution[0] / domain_length_x * char_length
         self.char_length = char_length
         self.char_velocity = char_velocity
         self.resolution = self.make_resolution(resolution, stencil)
+        self.start_point = start_point if start_point else [0]*len(self.resolution)
+        self.end_point = end_point if end_point else [0]*len(self.resolution)
         self._mask = torch.zeros(self.resolution, dtype=torch.bool)
         ExtFlow.__init__(self, context, resolution, reynolds_number,
                          mach_number, stencil, equilibrium)
@@ -101,6 +101,8 @@ class Obstacle(ExtFlow):
         u_char = self.units.characteristic_velocity_pu * self._unit_vector()
         u_char = append_axes(u_char, self.stencil.d)
         u = ~self.mask * u_char
+        #TODO
+        #u[0, 40:50, :] += None #sinus schwingung, nicht zu große amplitude
         return p, u
 
     @property
@@ -108,8 +110,10 @@ class Obstacle(ExtFlow):
         if self.ref_level == 0:
             xyz = tuple(self.units.convert_length_to_pu(torch.arange(n)) for n in
                         self.resolution)
-        elif self.ref_level == 1:
-            xyz = tuple(map(lambda start, stop: self.units.convert_length_to_pu(torch.arange(start*2 , stop *2 -1)), self.start_point, self.end_point))
+        else:
+            scaling_factor = 2 ** self.ref_level
+            xyz = tuple(map(lambda start, stop: self.units.convert_length_to_pu(
+                torch.arange(start*scaling_factor , stop*scaling_factor -1)), self.start_point, self.end_point))
 
         return torch.meshgrid(*xyz, indexing='ij')
 
