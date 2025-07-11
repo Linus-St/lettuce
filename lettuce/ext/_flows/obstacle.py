@@ -1,3 +1,4 @@
+import math
 import warnings
 from typing import Union, List, Optional
 
@@ -102,7 +103,8 @@ class Obstacle(ExtFlow):
         u_char = append_axes(u_char, self.stencil.d)
         u = ~self.mask * u_char
         #TODO
-        #u[0, 40:50, :] += None #sinus schwingung, nicht zu große amplitude
+        if self.ref_level == 0:
+            u[0, 40:50, :] += torch.sin(torch.linspace(0, 2*math.pi, 200))*0.2
         return p, u
 
     @property
@@ -113,7 +115,7 @@ class Obstacle(ExtFlow):
         else:
             scaling_factor = 2 ** self.ref_level
             xyz = tuple(map(
-                lambda start, stop: self.units.convert_length_to_pu(torch.arange(start*scaling_factor , stop*scaling_factor -1)),
+                lambda start, stop: self.units.convert_length_to_pu(torch.arange(start*scaling_factor, stop*scaling_factor + 1)),
                 self.start_point, self.end_point
             ))
 
