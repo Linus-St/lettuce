@@ -63,8 +63,8 @@ class Obstacle(ExtFlow):
         self.char_length = char_length
         self.char_velocity = char_velocity
         self.resolution = self.make_resolution(resolution, stencil)
-        self.start_point = start_point if start_point else [0]*len(self.resolution)
-        self.end_point = end_point if end_point else [0]*len(self.resolution)
+        self.start_point = start_point if start_point is not None else [0]*len(self.resolution)
+        self.end_point = end_point if end_point is not None else [0]*len(self.resolution)
         self._mask = torch.zeros(self.resolution, dtype=torch.bool)
         ExtFlow.__init__(self, context, resolution, reynolds_number,
                          mach_number, stencil, equilibrium)
@@ -112,8 +112,10 @@ class Obstacle(ExtFlow):
                         self.resolution)
         else:
             scaling_factor = 2 ** self.ref_level
-            xyz = tuple(map(lambda start, stop: self.units.convert_length_to_pu(
-                torch.arange(start*scaling_factor , stop*scaling_factor -1)), self.start_point, self.end_point))
+            xyz = tuple(map(
+                lambda start, stop: self.units.convert_length_to_pu(torch.arange(start*scaling_factor , stop*scaling_factor -1)),
+                self.start_point, self.end_point
+            ))
 
         return torch.meshgrid(*xyz, indexing='ij')
 
