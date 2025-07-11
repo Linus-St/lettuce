@@ -28,14 +28,36 @@ class RefinementConfig:
         return
 
     def add_refinement_relative(self, start_relative: np.array, end_relative: np.array):
-        # rint rundet auf den nächsten geraden int (0.5 -> 0, 1.5 -> 2). Mit trunc rundet man immer runter
-        minimum_coarse = minimum_coarse_lvl0 = np.rint(self.resolution_lvl0 * start_relative).astype(int, casting='unsafe')
-        maximum_coarse = maximum_coarse_lvl0 = np.rint(self.resolution_lvl0 * end_relative).astype(int, casting='unsafe')
-        if self.refinement_level != 0:
-            for refinement in self.refinement_levels:
-                minimum_coarse = refinement.transform.coarse_to_fine(minimum_coarse)
-                maximum_coarse = refinement.transform.coarse_to_fine(maximum_coarse)
-        self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, minimum_coarse_lvl0, maximum_coarse_lvl0))
+        if self.refinement_level == 0:
+            minimum_coarse = minimum_coarse_lvl0 = list(map(
+                lambda resolution, value: np.abs(np.linspace(0, 1, num=resolution) - value).argmin(),
+                self.resolution_lvl0, start_relative
+            ))
+            maximum_coarse = maximum_coarse_lvl0 = list(map(
+                lambda resolution, value: np.abs(np.linspace(0, 1, num=resolution) - value).argmin(),
+                self.resolution_lvl0, end_relative
+            ))
+        else:
+            beginning = np.zeros(self.resolution_lvl0.shape)
+            for i, ref in enumerate(self.refinement_levels):
+                beginning = beginning + (ref.coarse_min / (2**i * (self.resolution_lvl0 - 1)))
+
+            linspace = np.array([np.arange(res * 2 - 1) for res in self.refinement_levels[-1].border_length_coarse])
+            linspace = linspace / ((2 ** self.refinement_level * (self.resolution_lvl0 - 1))[:, np.newaxis])
+            linspace = linspace + beginning[:, np.newaxis]
+
+            minimum_coarse = list(map(
+                lambda space, value: np.abs(space - value).argmin(),
+                linspace, start_relative
+            ))
+            maximum_coarse = list(map(
+                lambda space, value: np.abs(space - value).argmin(),
+                linspace, end_relative
+            ))
+
+            minimum_coarse_lvl0 = self.refinement_levels[0].minimum_point_lvl0
+            maximum_coarse_lvl0 = self.refinement_levels[0].maximum_point_lvl0
+        self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, tuple(minimum_coarse_lvl0), tuple(maximum_coarse_lvl0)))
         return
 
 class Refinement:
