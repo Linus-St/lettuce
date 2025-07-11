@@ -27,6 +27,9 @@ class RefinementConfig:
         self.add_refinement_relative(start_physical / self.dimensions_lvl0_pu[0], end_physical / self.dimensions_lvl0_pu[1])
         return
 
+    # def add_refinement_by_index(self, start_point: np.array, end_point: np.array):
+    #     return
+
     def add_refinement_relative(self, start_relative: np.array, end_relative: np.array):
         # rint rundet auf den nächsten geraden int (0.5 -> 0, 1.5 -> 2). Mit trunc rundet man immer runter
         minimum_coarse = minimum_coarse_lvl0 = np.rint(self.resolution_lvl0 * start_relative).astype(int, casting='unsafe')
@@ -39,7 +42,19 @@ class RefinementConfig:
         return
 
 class Refinement:
+    # coarse_borders: [x_min, x_max], [y_min, y_max] as indices in coarse grid
+    # coarse_border_slices: slices to access the areas between and including x_min, x_max ...
+    # border_length_coarse: number of coarse points in the refined domain,  x_max - x_min + 1
+    # TODO beschreibung korrekt, ist das äußerste grid
+    # minimum_point_lvl0: point in coarse grid, where refinement begins, Point (x_min, y_min)
+    # maximum_point_lvl0: point in coarse grid, where refinement ends, Point (x_max, y_max)
+    # transformation: transformation class to transform indices between coarse and fine grid
+    # coarse_simulation: simulation that handles simulating the coarse domain
+    # fine_simulation: simulation that handles simulating the fine domain
+
     coarse_borders: tuple[tuple[int, int], ...]
+    coarse_min: tuple[int, ...]
+    coarse_max: tuple[int, ...]
     coarse_border_slices: tuple[slice, ...]
     border_length_coarse: tuple[int, ...]
     minimum_point_lvl0: tuple[int, ...]
@@ -51,8 +66,10 @@ class Refinement:
     def __init__(self, minimum_coarse: list[int], maximum_coarse: list[int], minimum_lvl0: tuple[int, ...]=None, maximum_lvl0: tuple[int, ...]=None):
         self.coarse_borders = tuple(map(lambda a, b: tuple((a, b)), minimum_coarse, maximum_coarse))
         # TODO check if b+1 is needed, confusion...
-        self.coarse_border_slices = tuple(map(lambda a, b: slice(a, b), minimum_coarse, maximum_coarse))
-        self.border_length_coarse = tuple(map(lambda a, b: b - a, minimum_coarse, maximum_coarse))
+        self.coarse_border_slices = tuple(map(lambda a, b: slice(a, b+1), minimum_coarse, maximum_coarse))
+        self.coarse_min = tuple(minimum_coarse)
+        self.coarse_max = tuple(maximum_coarse)
+        self.border_length_coarse = tuple(map(lambda a, b: b - a + 1, minimum_coarse, maximum_coarse))
         self.transform = Transformation(np.array(minimum_coarse), np.array(maximum_coarse))
         self.minimum_point_lvl0 = minimum_lvl0
         self.maximum_point_lvl0 = maximum_lvl0
