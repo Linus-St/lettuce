@@ -70,20 +70,24 @@ flow_lvl2.mask = ((x - x_c) ** 2 + (y - y_c) ** 2) < (r ** 2)
 
 collision_lvl0= BGKCollision(tau=flow_lvl0.units.relaxation_parameter_lu)
 simulation_lvl0 = Simulation(flow_lvl0, collision_lvl0, refinement=refinement_lvl_1, reporter=[])
-# vtk0 = VTKReporter(interval=50)
-# simulation_lvl0.reporter.append(vtk0)
+
+name = './data/vtk_debugging/multi_cylinder_with_mask/'
+
+VTKreport0 = lt.VTKReporter(interval=25, filename_base=name+'lvl0', flow_grid=flow_lvl0.grid)
+simulation_lvl0.reporter.append(VTKreport0)
 
 collision_lvl1= BGKCollision(tau=flow_lvl1.units.relaxation_parameter_lu)
 simulation_lvl1 = Simulation(flow_lvl1, collision_lvl1, refinement=refinement_lvl_2, reporter=[])
-# vtk1 = VTKReporter(interval=100)
-# simulation_lvl1.reporter.append(vtk1)
+VTKreport1 = lt.VTKReporter(interval=50, filename_base=name+'lvl1', flow_grid=flow_lvl1.grid)
+simulation_lvl0.reporter.append(VTKreport1)
 
 collision_lvl2= BGKCollision(tau=flow_lvl2.units.relaxation_parameter_lu)
 simulation_lvl2 = Simulation(flow_lvl2, collision_lvl1, reporter=[])
+VTKreport2 = lt.VTKReporter(interval=100, filename_base=name+'lvl2', flow_grid=flow_lvl2.grid)
+VTKreport2.output_mask(simulation_lvl2)
+simulation_lvl0.reporter.append(VTKreport2)
 energyreporter = lt.ObservableReporter(lt.IncompressibleKineticEnergy(flow_lvl2), interval=50)
 simulation_lvl2.reporter.append(energyreporter)
-# vtk2 = VTKReporter(interval=200)
-# simulation_lvl2.reporter.append(vtk2)
 
 refinement_lvl_1.coarse_simulation = simulation_lvl0
 refinement_lvl_1.fine_simulation = simulation_lvl1

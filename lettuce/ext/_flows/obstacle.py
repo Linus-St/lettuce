@@ -104,7 +104,7 @@ class Obstacle(ExtFlow):
         u = ~self.mask * u_char
         #TODO
         if self.ref_level == 0:
-            u[0, 40:50, :] += torch.sin(torch.linspace(0, 2*math.pi, 200))*0.2
+            u[0, 30:40, :] += torch.sin(torch.linspace(0, 2*math.pi, 200))*0.2
         return p, u
 
     @property
