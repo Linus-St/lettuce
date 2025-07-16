@@ -44,7 +44,7 @@ class VTKReporter(Reporter):
             # the grid needs to be exported with the point data, but it starts out as a meshgrid, so:
             # call unique on each dimension so we get the possible coordinate values
             # convert to numpy array for later export to vtk
-            self.flow_grid = tuple(torch.unique(dim.cpu()).numpy().sort() for dim in flow_grid)
+            self.flow_grid = tuple((torch.unique(dim).numpy() for dim in flow_grid))
 
     def __call__(self, simulation: 'Simulation'):
         if simulation.flow.i % self.interval == 0:

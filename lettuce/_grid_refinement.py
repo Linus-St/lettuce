@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+import lettuce as lt
 from lettuce.transformation import Transformation
 
 
@@ -27,8 +28,14 @@ class RefinementConfig:
         self.add_refinement_relative(start_physical / self.dimensions_lvl0_pu[0], end_physical / self.dimensions_lvl0_pu[1])
         return
 
-    # def add_refinement_by_index(self, start_point: np.array, end_point: np.array):
-    #     return
+    def add_refinement_by_index(self, start_point: np.array, end_point: np.array):
+        minimum_coarse = start_point
+        maximum_coarse = end_point
+        for refinement in self.refinement_levels:
+            minimum_coarse = refinement.transform.coarse_to_fine(minimum_coarse)
+            maximum_coarse = refinement.transform.coarse_to_fine(maximum_coarse)
+        self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, start_point, end_point))
+        return self.refinement_levels[-1]
 
     def add_refinement_relative(self, start_relative: np.array, end_relative: np.array):
         # rint rundet auf den nächsten geraden int (0.5 -> 0, 1.5 -> 2). Mit trunc rundet man immer runter
@@ -39,6 +46,17 @@ class RefinementConfig:
                 minimum_coarse = refinement.transform.coarse_to_fine(minimum_coarse)
                 maximum_coarse = refinement.transform.coarse_to_fine(maximum_coarse)
         self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, minimum_coarse_lvl0, maximum_coarse_lvl0))
+        return
+
+    def add_vtk_reporters(self, folder_name: str, interval: int):
+        if self.refinement_level > 0:
+            for level, refinement in enumerate(self.refinement_levels):
+                simulation = refinement.coarse_simulation
+                reporter = lt.VTKReporter(interval=interval * 2**level, filename_base=folder_name+'/lvl'+str(level), flow_grid=simulation.flow.grid)
+                simulation.reporter.append(reporter)
+            simulation = self.refinement_levels[-1].fine_simulation
+            reporter = lt.VTKReporter(interval=interval * 2 ** self.refinement_level, filename_base=folder_name+'/lvl'+str(self.refinement_level), flow_grid=simulation.flow.grid)
+            simulation.reporter.append(reporter)
         return
 
 class Refinement:
@@ -57,6 +75,7 @@ class Refinement:
     coarse_max: tuple[int, ...]
     coarse_border_slices: tuple[slice, ...]
     border_length_coarse: tuple[int, ...]
+    resolution: tuple[int, ...]
     minimum_point_lvl0: tuple[int, ...]
     maximum_point_lvl0: tuple[int, ...]
     transform: Transformation
@@ -70,6 +89,7 @@ class Refinement:
         self.coarse_min = tuple(minimum_coarse)
         self.coarse_max = tuple(maximum_coarse)
         self.border_length_coarse = tuple(map(lambda a, b: b - a + 1, minimum_coarse, maximum_coarse))
+        self.resolution = tuple([int(i)*2-1 for i in self.border_length_coarse])
         self.transform = Transformation(np.array(minimum_coarse), np.array(maximum_coarse))
         self.minimum_point_lvl0 = minimum_lvl0
         self.maximum_point_lvl0 = maximum_lvl0
