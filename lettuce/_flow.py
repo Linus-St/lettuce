@@ -99,6 +99,11 @@ class Flow(ABC):
         """boundaries"""
         return []
 
+    @boundaries.setter
+    @abstractmethod
+    def boundaries(self, b_list):
+        return
+
     @abstractmethod
     def initial_pu(self) -> (float, Union[np.array, torch.Tensor]):
         """initial solution in physical units"""

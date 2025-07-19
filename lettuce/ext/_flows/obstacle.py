@@ -69,6 +69,7 @@ class Obstacle(ExtFlow):
         self._mask = torch.zeros(self.resolution, dtype=torch.bool)
         ExtFlow.__init__(self, context, resolution, reynolds_number,
                          mach_number, stencil, equilibrium)
+        self._boundaries = self.default_boundaries()
 
     def make_units(self, reynolds_number, mach_number, resolution: List[int]
                    ) -> 'UnitConversion':
@@ -102,9 +103,9 @@ class Obstacle(ExtFlow):
         u_char = self.units.characteristic_velocity_pu * self._unit_vector()
         u_char = append_axes(u_char, self.stencil.d)
         u = ~self.mask * u_char
-        #TODO
-        if self.ref_level == 0:
-            u[0, 30:40, :] += torch.sin(torch.linspace(0, 2*math.pi, 200))*0.2
+        # if self.ref_level == 0:
+        #     u[0, 30:40, :] += torch.sin(torch.linspace(0, 2*math.pi, 200))*0.2
+        #     u[1, 30:40, :] += torch.sin(torch.linspace(0, 2 * math.pi, 200)) * 0.2
         return p, u
 
     @property
@@ -123,6 +124,13 @@ class Obstacle(ExtFlow):
 
     @property
     def boundaries(self):
+        return self._boundaries
+
+    @boundaries.setter
+    def boundaries(self, b_list):
+        self._boundaries = b_list
+
+    def default_boundaries(self):
         x = self.grid[0]
         return [
             EquilibriumBoundaryPU(context=self.context,
