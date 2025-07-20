@@ -13,7 +13,6 @@ def map_fine_on_coarse(fine: np.array, coarse: np.array, offset):
     result[area_fine_x, area_fine_y] = fine
     return result
 
-# Sie sind grad vom tpyp np.float64...
 def show_together(values: list[np.array], offsets):
     coarse_grid = values[0]
     for i, v in enumerate(values[1:]):
@@ -40,30 +39,23 @@ refinement_config = RefinementConfig([physical_length, physical_width], resoluti
 refinement_config.add_refinement_relative(ref_lvl_1_pu[0], ref_lvl_1_pu[1])
 refinement_config.add_refinement_relative(ref_lvl_2_pu[0], ref_lvl_2_pu[1])
 
-flow_lvl0 = Obstacle(context, resolution, reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length)
-flow_lvl0.boundaries[2] = None
+flow_lvl0 = Obstacle(context, resolution, reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length, boundaries_modified=True)
 
 refinement_lvl_1 = refinement_config.refinement_levels[0]
 resolution_lvl1 = refinement_lvl_1.resolution
 char_len_lu_1 = flow_lvl0.char_length_lu*2
 ref_lvl_1_length_pu = resolution_lvl1[0] / char_len_lu_1
 flow_lvl1 = Obstacle(context, list(resolution_lvl1), reynolds_number=reynolds, mach_number=mach, domain_length_x=ref_lvl_1_length_pu,
-                     ref_level=1, start_point=refinement_lvl_1.minimum_point_lvl0, end_point=refinement_lvl_1.maximum_point_lvl0)
+                     ref_level=1, start_point=refinement_lvl_1.minimum_point_lvl0, end_point=refinement_lvl_1.maximum_point_lvl0, boundaries_modified=True)
 flow_lvl1.char_length_lu = char_len_lu_1
-flow_lvl1.boundaries[0] = None
-flow_lvl1.boundaries[1] = None
-flow_lvl1.boundaries[2] = None
 
 refinement_lvl_2 = refinement_config.refinement_levels[1]
 resolution_lvl2 = refinement_lvl_2.resolution
 char_len_lu_2 = flow_lvl1.char_length_lu*2
 ref_lvl_2_length_pu = resolution_lvl2[0] / char_len_lu_2
 flow_lvl2 = Obstacle(context, list(resolution_lvl2), reynolds_number=reynolds, mach_number=mach, domain_length_x=ref_lvl_2_length_pu,
-                     ref_level=2, start_point=refinement_lvl_2.minimum_point_lvl0, end_point=refinement_lvl_2.maximum_point_lvl0)
+                     ref_level=2, start_point=refinement_lvl_2.minimum_point_lvl0, end_point=refinement_lvl_2.maximum_point_lvl0, boundaries_modified=True)
 flow_lvl2.char_length_lu = char_len_lu_2
-flow_lvl2.boundaries[0] = None
-flow_lvl2.boundaries[1] = None
-# TODO boundaries nicht über indices
 
 x, y = torch.meshgrid(torch.arange(refinement_lvl_2.border_length_coarse[0]*2-1), torch.arange(refinement_lvl_2.border_length_coarse[1]*2-1), indexing='ij')
 r = .25*y.max()
@@ -91,7 +83,7 @@ refinement_lvl_2.fine_simulation = simulation_lvl2
 
 refinement_config.add_vtk_reporters(name, 25)
 
-simulation_lvl0(1000)
+simulation_lvl0(10000)
 
 u_0 = context.convert_to_ndarray(flow_lvl0.u_pu)
 u_0_norm= np.linalg.norm(u_0, axis=0).transpose()
