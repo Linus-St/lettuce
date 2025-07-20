@@ -6,6 +6,14 @@ import torch
 
 name = './data/vtk_debugging/multi_cylinder_1000_steps'
 
+boundaries_lvl0 = [
+    lt.EquilibriumBoundaryPU.__name__
+]
+boundaries_lvl1 = []
+boundaries_lvl2 = [
+    lt.BounceBackBoundary.__name__
+]
+
 def map_fine_on_coarse(fine: np.array, coarse: np.array, offset):
     result = coarse.repeat(2, 0).repeat(2, 1)
     area_fine_x = slice(offset[0]*2, offset[0]*2+fine.shape[0])
@@ -43,6 +51,8 @@ refinement_config.add_refinement_relative(ref_lvl_2_pu[0], ref_lvl_2_pu[1])
 flow_lvl0 = Obstacle(context, resolution, reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length)
 flow_lvl0.boundaries[2] = None
 
+flow_lvl0.boundaries = list(filter(lambda b: type(b).__name__ in boundaries_lvl0, flow_lvl0.boundaries))
+
 refinement_lvl_1 = refinement_config.refinement_levels[0]
 resolution_lvl1 = refinement_lvl_1.resolution
 char_len_lu_1 = flow_lvl0.char_length_lu*2
@@ -54,6 +64,8 @@ flow_lvl1.boundaries[0] = None
 flow_lvl1.boundaries[1] = None
 flow_lvl1.boundaries[2] = None
 
+flow_lvl1.boundaries = list(filter(lambda b: type(b).__name__ in boundaries_lvl1, flow_lvl1.boundaries))
+
 refinement_lvl_2 = refinement_config.refinement_levels[1]
 resolution_lvl2 = refinement_lvl_2.resolution
 char_len_lu_2 = flow_lvl1.char_length_lu*2
@@ -63,7 +75,8 @@ flow_lvl2 = Obstacle(context, list(resolution_lvl2), reynolds_number=reynolds, m
 flow_lvl2.char_length_lu = char_len_lu_2
 flow_lvl2.boundaries[0] = None
 flow_lvl2.boundaries[1] = None
-# TODO boundaries nicht über indices
+
+flow_lvl2.boundaries = list(filter(lambda b: type(b).__name__ in boundaries_lvl2, flow_lvl2.boundaries))
 
 x, y = torch.meshgrid(torch.arange(refinement_lvl_2.border_length_coarse[0]*2-1), torch.arange(refinement_lvl_2.border_length_coarse[1]*2-1), indexing='ij')
 r = .25*y.max()

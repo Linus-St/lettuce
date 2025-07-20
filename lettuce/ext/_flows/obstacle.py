@@ -134,7 +134,7 @@ class Obstacle(ExtFlow):
         x = self.grid[0]
         return [
             EquilibriumBoundaryPU(context=self.context,
-                                  mask=torch.abs(x) < 1e-6,
+                                  mask=(torch.abs(x) < 1e-6) + (torch.abs(x) > (x.max() - 1e-6)),
                                   velocity=self.units.
                                   characteristic_velocity_pu
                                   * self._unit_vector()
