@@ -15,7 +15,7 @@ class BounceBackBoundary(Boundary):
         return
 
     def __call__(self, flow: 'Flow'):
-        return flow.f[flow.stencil.opposite]
+        return flow.f_next[flow.stencil.opposite]
 
     def make_no_streaming_mask(self, shape: List[int], context: 'Context'
                                ) -> Optional[torch.Tensor]:

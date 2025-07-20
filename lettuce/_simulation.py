@@ -168,28 +168,29 @@ class Simulation:
     def _stream(self):
         for i in range(1, self.flow.stencil.q):
             if self.no_streaming_mask is None:
-                self.flow.f_next[i] = self.__stream(self.flow.f, i,
+                self.flow.f_next[i] = self.__stream(self.flow.f_next, i,
                                                self.flow.stencil.e,
                                                self.flow.stencil.d)
             else:
-                new_fi = self.__stream(self.flow.f, i, self.flow.stencil.e,
+                new_fi = self.__stream(self.flow.f_next, i, self.flow.stencil.e,
                                        self.flow.stencil.d)
                 self.flow.f_next[i] = torch.where(torch.eq(
-                    self.no_streaming_mask[i], 1), self.flow.f[i], new_fi)
+                    self.no_streaming_mask[i], 1), self.flow.f_next[i], new_fi)
         return self.flow.f_next
 
     def _collide(self):
+        # TODO: Check if boundary call is compatible with the data being in flow.f_next
         if self.no_collision_mask is None:
             self.flow.f_next = self.collision(self.flow)
             for i, boundary in enumerate(self.boundaries[1:], start=1):
-                self.flow.f_next = boundary(self.flow.f_next)
+                self.flow.f_next = boundary(self.flow)
         else:
             torch.where(torch.eq(self.no_collision_mask, 0),
                         self.collision(self.flow), self.flow.f,
                         out=self.flow.f_next)
             for i, boundary in enumerate(self.boundaries[1:], start=1):
                 torch.where(torch.eq(self.no_collision_mask, i),
-                            boundary(self.flow), self.flow.f, out=self.flow.f_next)
+                            boundary(self.flow), self.flow.f_next, out=self.flow.f_next)
         return self.flow.f_next
 
     def _report(self):
