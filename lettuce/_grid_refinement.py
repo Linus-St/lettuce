@@ -143,4 +143,6 @@ class Refinement:
             self.fine_simulation.flow.interpolate_borders()
         # set f = f_next
         self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
+
+        self.fine_simulation.trigger_reporter()
         return

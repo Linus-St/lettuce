@@ -210,6 +210,10 @@ class Simulation:
         self.flow.f = self.flow.f_next
         return
 
+    def trigger_reporter(self):
+        self._report()
+        return
+
     def __call__(self, num_steps):
         beg = timer()
 
@@ -222,7 +226,8 @@ class Simulation:
             else:
                 self._collide_and_stream(self)
             self.flow.i += 1
-            self._report()
+            if self.flow.ref_level == 0:
+                self.trigger_reporter()
 
         end = timer()
         return num_steps * self.flow.rho().numel() / 1e6 / (end - beg)
