@@ -46,7 +46,7 @@ class RefinementConfig:
                 minimum_coarse = refinement.transform.coarse_to_fine(minimum_coarse)
                 maximum_coarse = refinement.transform.coarse_to_fine(maximum_coarse)
         self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, minimum_coarse_lvl0, maximum_coarse_lvl0))
-        return
+        return self.refinement_levels[-1]
 
     def add_vtk_reporters(self, folder_name: str, interval: int):
         if self.refinement_level > 0:
@@ -58,6 +58,20 @@ class RefinementConfig:
             reporter = lt.VTKReporter(interval=interval * 2 ** self.refinement_level, filename_base=folder_name+'/lvl'+str(self.refinement_level), flow_grid=simulation.flow.grid)
             simulation.reporter.append(reporter)
         return
+
+    def __str__(self):
+        result = 'base resolution: ' + str(self.resolution_lvl0) + '\n'
+        result += 'refinement levels: ' + str(self.refinement_level) + '\n'
+        for i, ref in enumerate(self.refinement_levels):
+            result += f'===== Level {i} =====\n' + str(ref) + '\n'
+        return result
+
+    def save_to_file(self, path_to_dir, extra_info=None):
+        with open(path_to_dir+'/refinement_config.txt', "w") as f:
+            print(str(self), file=f)
+            print(f'Additional information: \n{extra_info}', file=f)
+
+
 
 class Refinement:
     # coarse_borders: [x_min, x_max], [y_min, y_max] as indices in coarse grid
@@ -84,7 +98,6 @@ class Refinement:
 
     def __init__(self, minimum_coarse: list[int], maximum_coarse: list[int], minimum_lvl0: tuple[int, ...]=None, maximum_lvl0: tuple[int, ...]=None):
         self.coarse_borders = tuple(map(lambda a, b: tuple((a, b)), minimum_coarse, maximum_coarse))
-        # TODO check if b+1 is needed, confusion...
         self.coarse_border_slices = tuple(map(lambda a, b: slice(a, b+1), minimum_coarse, maximum_coarse))
         self.coarse_min = tuple(minimum_coarse)
         self.coarse_max = tuple(maximum_coarse)
@@ -146,3 +159,11 @@ class Refinement:
 
         self.fine_simulation.trigger_reporter()
         return
+
+    def __str__(self):
+        result = f'refinement start: ({str(self.coarse_min[0])}, {str(self.coarse_min[1])})\n'
+        result += f'refinement end: ({str(self.coarse_max[0])}, {str(self.coarse_min[1])})\n'
+        result += f'resolution: {self.resolution}\n'
+        result += 'refinement start on level 0: ' + str(self.minimum_point_lvl0) + '\n'
+        result += 'refinement end on level 0: ' + str(self.maximum_point_lvl0)
+        return result
