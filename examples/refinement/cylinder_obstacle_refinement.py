@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
-name = './data/vtk_debugging/multi_cylinder_1000_steps'
+name = './data/cylinder_benchmark/0'
+
 
 def map_fine_on_coarse(fine: np.array, coarse: np.array, offset):
     result = coarse.repeat(2, 0).repeat(2, 1)
@@ -28,76 +29,97 @@ mach = 0.1
 physical_length = 10
 physical_width = 5
 
-ref_lvl_1_pu = np.array([[1/10, 3/10], [5/10, 7/10]])
+reporter_time_step = 10
+info = f"diameter = 10 on coarse grid\n reynolds = {reynolds}, mach = {mach}\n physical dims: ({physical_length}, {physical_width})\n time per step on coarse: {reporter_time_step}"
 
-ref_lvl_2_pu = np.array([[2/10, 4/10], [4/10, 6/10]])
+diam_0 = 10
+s = 10
+y_res = int(s * diam_0)
+x_res = int(2 * s * diam_0)
 
-resolution = [400, 200]
+resolution = [x_res, y_res]
+midpoint_0 = np.array([y_res//2, y_res//2])
+
+start_1 = np.array([20, 20])
+end_1 = np.array([140, 80])
+
+start_2 = np.array([30, 30])
+end_2 = np.array([110, 70])
 
 refinement_config = RefinementConfig([physical_length, physical_width], resolution)
 
-refinement_config.add_refinement_relative(ref_lvl_1_pu[0], ref_lvl_1_pu[1])
-refinement_config.add_refinement_relative(ref_lvl_2_pu[0], ref_lvl_2_pu[1])
+ref1 = refinement_config.add_refinement_by_index(start_1, end_1)
+ref2 = refinement_config.add_refinement_by_index(start_2, end_2)
 
-flow_lvl0 = Obstacle(context, resolution, reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length, boundaries_modified=True)
+diam_2 = diam_0 * 4 #- 3
+radius_2 = diam_2 / 2
 
-refinement_lvl_1 = refinement_config.refinement_levels[0]
-resolution_lvl1 = refinement_lvl_1.resolution
-char_len_lu_1 = flow_lvl0.char_length_lu*2
-ref_lvl_1_length_pu = resolution_lvl1[0] / char_len_lu_1
-flow_lvl1 = Obstacle(context, list(resolution_lvl1), reynolds_number=reynolds, mach_number=mach, domain_length_x=ref_lvl_1_length_pu,
-                     ref_level=1, start_point=refinement_lvl_1.minimum_point_lvl0, end_point=refinement_lvl_1.maximum_point_lvl0, boundaries_modified=True)
-flow_lvl1.char_length_lu = char_len_lu_1
+midpoint_2 = ref2.transform.coarse_to_fine(ref1.transform.coarse_to_fine(midpoint_0))
 
-refinement_lvl_2 = refinement_config.refinement_levels[1]
-resolution_lvl2 = refinement_lvl_2.resolution
-char_len_lu_2 = flow_lvl1.char_length_lu*2
-ref_lvl_2_length_pu = resolution_lvl2[0] / char_len_lu_2
-flow_lvl2 = Obstacle(context, list(resolution_lvl2), reynolds_number=reynolds, mach_number=mach, domain_length_x=ref_lvl_2_length_pu,
-                     ref_level=2, start_point=refinement_lvl_2.minimum_point_lvl0, end_point=refinement_lvl_2.maximum_point_lvl0, boundaries_modified=True)
-flow_lvl2.char_length_lu = char_len_lu_2
+char_length_lu0 = diam_0
+char_length_pu = char_length_lu0 * physical_length / resolution[0]
 
-x, y = torch.meshgrid(torch.arange(refinement_lvl_2.border_length_coarse[0]*2-1), torch.arange(refinement_lvl_2.border_length_coarse[1]*2-1), indexing='ij')
-r = .25*y.max()
-x_c = 0.5*x.max()
-y_c = 0.5*y.max()
+flow_lvl0 = Obstacle(context, resolution, reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length, char_length=char_length_pu, boundaries_modified=True)
+
+physical_length_1 = ref1.resolution[0] * (physical_length / resolution[0]) / 2
+flow_lvl1 = Obstacle(context, list(ref1.resolution), reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length_1,
+                     ref_level=1, start_point=ref1.minimum_point_lvl0, end_point=ref1.maximum_point_lvl0, char_length=char_length_pu, boundaries_modified=True)
+
+physical_length_2 = ref2.resolution[0] * (physical_length_1 / ref1.resolution[0]) / 2
+flow_lvl2 = Obstacle(context, list(ref2.resolution), reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length_2,
+                     ref_level=2, start_point=ref2.minimum_point_lvl0, end_point=ref2.maximum_point_lvl0, char_length=char_length_pu, boundaries_modified=True)
+
+x, y = torch.meshgrid(torch.arange(ref2.border_length_coarse[0]*2-1), torch.arange(ref2.border_length_coarse[1]*2-1), indexing='ij')
+r = radius_2 #.25*y.max()
+x_c = midpoint_2[0] # 0.5*x.max()
+y_c = midpoint_2[1] #0.5*y.max()
 flow_lvl2.mask = ((x - x_c) ** 2 + (y - y_c) ** 2) < (r ** 2)
 
 
 collision_lvl0= BGKCollision(tau=flow_lvl0.units.relaxation_parameter_lu)
-simulation_lvl0 = Simulation(flow_lvl0, collision_lvl0, refinement=refinement_lvl_1, reporter=[])
+simulation_lvl0 = Simulation(flow_lvl0, collision_lvl0, refinement=ref1, reporter=[])
 
 collision_lvl1= BGKCollision(tau=flow_lvl1.units.relaxation_parameter_lu)
-simulation_lvl1 = Simulation(flow_lvl1, collision_lvl1, refinement=refinement_lvl_2, reporter=[])
+simulation_lvl1 = Simulation(flow_lvl1, collision_lvl1, refinement=ref2, reporter=[])
 
 collision_lvl2= BGKCollision(tau=flow_lvl2.units.relaxation_parameter_lu)
 simulation_lvl2 = Simulation(flow_lvl2, collision_lvl1, reporter=[])
-energyreporter = lt.ObservableReporter(lt.IncompressibleKineticEnergy(flow_lvl2), interval=50)
-simulation_lvl2.reporter.append(energyreporter)
 
-refinement_lvl_1.coarse_simulation = simulation_lvl0
-refinement_lvl_1.fine_simulation = simulation_lvl1
+drag_file = open(name+'/drag', "w")
+lift_file = open(name+'/lift', "w")
+drag_reporter= lt.ObservableReporter(lt.DragCoefficient(flow_lvl2), interval=reporter_time_step*2**refinement_config.refinement_level, out=drag_file)
+lift_reporter= lt.ObservableReporter(lt.LiftCoefficient(flow_lvl2), interval=reporter_time_step*2**refinement_config.refinement_level, out=lift_file)
+simulation_lvl2.reporter.append(drag_reporter)
+simulation_lvl2.reporter.append(lift_reporter)
 
-refinement_lvl_2.coarse_simulation = simulation_lvl1
-refinement_lvl_2.fine_simulation = simulation_lvl2
+ref1.coarse_simulation = simulation_lvl0
+ref1.fine_simulation = simulation_lvl1
 
-refinement_config.add_vtk_reporters(name, 25)
+ref2.coarse_simulation = simulation_lvl1
+ref2.fine_simulation = simulation_lvl2
+
+refinement_config.add_vtk_reporters(name, reporter_time_step)
+#
+refinement_config.save_to_file(name, extra_info=info)
 
 simulation_lvl0(10000)
 
-u_0 = context.convert_to_ndarray(flow_lvl0.u_pu)
-u_0_norm= np.linalg.norm(u_0, axis=0).transpose()
+drag_file.close()
+lift_file.close()
 
-u_1= context.convert_to_ndarray(flow_lvl1.u_pu)
-u_1_norm = np.linalg.norm(u_1, axis=0).transpose()
-
-u_2= context.convert_to_ndarray(flow_lvl2.u_pu)
-u_2_norm = np.linalg.norm(u_2, axis=0).transpose()
-
-plt.imshow(show_together([u_0_norm, u_1_norm, u_2_norm], [[refinement_lvl_1.coarse_borders[1][0],refinement_lvl_1.coarse_borders[0][0]],
-                                                          [refinement_lvl_2.coarse_borders[1][0]*4, refinement_lvl_2.coarse_borders[0][0]*2]]))
-plt.colorbar()
-
-plt.title('Velocity after simulation')
-plt.tight_layout()
-plt.show()
+# u_0 = context.convert_to_ndarray(flow_lvl0.u_pu)
+# u_0_norm= np.linalg.norm(u_0, axis=0).transpose()
+#
+# u_1= context.convert_to_ndarray(flow_lvl1.u_pu)
+# u_1_norm = np.linalg.norm(u_1, axis=0).transpose()
+#
+# u_2= context.convert_to_ndarray(flow_lvl2.u_pu)
+# u_2_norm = np.linalg.norm(u_2, axis=0).transpose()
+#
+# plt.imshow(show_together([u_0_norm, u_1_norm, u_2_norm], [[ref1.coarse_borders[1][0],ref1.coarse_borders[0][0]],
+#                                                           [ref2.coarse_borders[1][0]*4, ref2.coarse_borders[0][0]*2]]))
+# plt.colorbar()
+#
+# plt.title('Velocity after simulation')
+# plt.tight_layout()
+# plt.show()
