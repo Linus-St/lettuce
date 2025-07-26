@@ -11,7 +11,7 @@ from packaging import version
 
 __all__ = ['Observable', 'ObservableReporter', 'MaximumVelocity',
            'IncompressibleKineticEnergy', 'Enstrophy', 'EnergySpectrum',
-           'Mass']
+           'Mass', 'LiftCoefficient', 'DragCoefficient']
 
 
 class Observable(ABC):
@@ -156,6 +156,71 @@ class Mass(Observable):
         if self.mask is not None:
             mass -= (f * self.mask.to(dtype=torch.float)).sum()
         return mass
+
+
+def calc_force_on_boundary(flow: 'Obstacle'):
+    tmp = torch.where(flow.mask, flow.f, torch.zeros_like(flow.f))
+    return 2 * torch.einsum('i..., id -> d', tmp, flow.torch_stencil.e)
+
+
+# Force? einfach beide ausgeben
+class DragCoefficient(Observable):
+    """The drag coefficient of an obstacle, calculated using momentum exchange method (MEM, MEA) according to a
+    modified version of M.Kliemank's Drag Coefficient Code
+    calculates the density, gets the force in x direction on the obstacle boundary,
+    calculates the coefficient of drag
+    """
+
+    def __init__(self, flow: 'Obstacle'):
+        super().__init__(flow)
+
+        #TODO area in lu
+        #self.area_lu = area * (self.flow.units.characteristic_length_lu / self.flow.units.characteristic_length_pu) ** (
+        #            self.lattice.D - 1)  # crosssectional area of obstacle in LU (! lengthdimension in 2D -> area-dimension = self.lattice.D-1)
+        self.nan = self.context.convert_to_tensor(torch.nan)
+        self.solid_mask = flow.mask
+        self.area_lu = flow.units.characteristic_length_lu
+
+    def __call__(self, f=None):
+        # rho = torch.mean(self.lattice.rho(f[:, 0, ...]))  # simple rho_mean, including the boundary region
+        # rho_mean (excluding boundary region):
+
+        rho_tmp = torch.where(self.solid_mask, self.nan, self.flow.rho(self.flow.f))
+        rho = torch.nanmean(rho_tmp)
+        force_x_lu = calc_force_on_boundary(self.flow)[0]
+        drag_coefficient = force_x_lu / (
+                    0.5 * rho * self.flow.units.characteristic_velocity_lu ** 2 * self.area_lu)  # calculate drag_coefficient in LU
+
+        return drag_coefficient
+    # Drag mitteln über Zeit ab Wirbelstraße
+    # Lift schwingung, Amplitude messen, die größten Amplituden mitteln
+
+
+class LiftCoefficient(Observable):
+    """The lift coefficient of an obstacle, calculated using momentum exchange method (MEM, MEA) according to a
+        modified version of M.Kliemank's lift Coefficient Code
+        calculates the density, gets the force in y direction on the obstacle boundary,
+        calculates the coefficient of lift
+        """
+
+    def __init__(self, flow: 'Obstacle'):
+        super().__init__(flow)
+        # TODO area in lu
+        self.nan = self.context.convert_to_tensor(torch.nan)
+        self.solid_mask = flow.mask
+        # projected area, for cylinder = diameter
+        self.area_lu = flow.units.characteristic_length_lu
+
+    def __call__(self, f=None):
+        # rho = torch.mean(self.lattice.rho(f[:, 0, ...]))  # simple rho_mean, including the boundary region
+        # rho_mean (excluding boundary region):
+        rho_tmp = torch.where(self.solid_mask, self.nan, self.flow.rho(self.flow.f))
+        rho = torch.nanmean(rho_tmp)
+        force_y_lu = calc_force_on_boundary(self.flow)[1]  # get current force on obstacle in y direction
+        lift_coefficient = force_y_lu / (
+                    0.5 * rho * self.flow.units.characteristic_velocity_lu ** 2 * self.area_lu)  # calculate lift_coefficient in LU
+
+        return lift_coefficient
 
 
 class ObservableReporter(Reporter):
