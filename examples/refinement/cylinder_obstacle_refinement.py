@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
-name = './data/cylinder_benchmark/0'
+name = './data/cylinder_benchmark/1'
 
 
 def map_fine_on_coarse(fine: np.array, coarse: np.array, offset):
@@ -23,33 +23,33 @@ def show_together(values: list[np.array], offsets):
 # context = Context(device="cpu")
 context = Context(device="cuda:0", use_native=False)
 
-reynolds = 150
+reynolds = 200
 mach = 0.1
 
 physical_length = 10
 physical_width = 5
 
 reporter_time_step = 10
-info = f"diameter = 10 on coarse grid\n reynolds = {reynolds}, mach = {mach}\n physical dims: ({physical_length}, {physical_width})\n time per step on coarse: {reporter_time_step}"
+info = f"diameter = 10 on coarse grid\nreynolds = {reynolds}, mach = {mach}\nphysical dims: ({physical_length}, {physical_width})\ntime per step on coarse: {reporter_time_step}"
 
-diam_0 = 10
-s = 10
+diam_0 = 15
+s = 19
 y_res = int(s * diam_0)
 x_res = int(2 * s * diam_0)
 
 resolution = [x_res, y_res]
 midpoint_0 = np.array([y_res//2, y_res//2])
 
-start_1 = np.array([20, 20])
-end_1 = np.array([140, 80])
+start_1 = np.array([4/38, 4/19])
+end_1 = np.array([26/38, 15/19])
 
-start_2 = np.array([30, 30])
-end_2 = np.array([110, 70])
+start_2 = np.array([7/38, 7/19])
+end_2 = np.array([17/38, 12/19])
 
 refinement_config = RefinementConfig([physical_length, physical_width], resolution)
 
-ref1 = refinement_config.add_refinement_by_index(start_1, end_1)
-ref2 = refinement_config.add_refinement_by_index(start_2, end_2)
+ref1 = refinement_config.add_refinement_relative(start_1, end_1)
+ref2 = refinement_config.add_refinement_relative(start_2, end_2)
 
 diam_2 = diam_0 * 4 #- 3
 radius_2 = diam_2 / 2
