@@ -45,6 +45,8 @@ class VTKReporter(Reporter):
             # call unique on each dimension so we get the possible coordinate values
             # convert to numpy array for later export to vtk
             self.flow_grid = tuple((torch.unique(dim).numpy() for dim in flow_grid))
+        else:
+            self.flow_grid = None
 
     def __call__(self, simulation: 'Simulation'):
         if simulation.flow.i % self.interval == 0:
