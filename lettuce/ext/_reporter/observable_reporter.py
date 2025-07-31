@@ -158,9 +158,6 @@ class Mass(Observable):
         return mass
 
 
-def calc_force_on_boundary(flow: 'Obstacle'):
-    tmp = torch.where(flow.mask, flow.f, torch.zeros_like(flow.f))
-    return 2 * torch.einsum('i..., id -> d', tmp, flow.torch_stencil.e)
 
 
 class DragAndLiftCoefficient(Observable):
@@ -180,7 +177,47 @@ class DragAndLiftCoefficient(Observable):
 
         self.nan = self.context.convert_to_tensor(torch.nan)
         self.solid_mask = flow.mask
-        self.area_lu = flow.units.characteristic_length_lu
+        self.area_lu = flow.char_length_lu
+        self.force_mask = self.create_force_mask()
+
+    def calc_force_on_boundary(self):
+            tmp = torch.where(self.force_mask, self.flow.f, torch.zeros_like(self.flow.f))
+            return 2 * torch.einsum('i..., id -> d', tmp, self.flow.torch_stencil.e)
+
+    def create_force_mask(self):
+        nx, ny = self.solid_mask.shape  # domain size in x and y
+        force_mask = np.zeros((self.flow.stencil.q, nx, ny), dtype=bool)
+        # f_mask: [q, nx, ny], marks all fs on the boundary-border, which point into the boundary/solid
+        #            self.force = np.zeros((nx, ny, 2))  # force in x and y on all individual nodes
+        a, b = torch.where(self.solid_mask)
+        # np.arrays: list of (a) x-indizes and (b) y-indizes in the boundary.mask
+        # ...to enable iteration over all boundary/wall/object-nodes
+        for p in range(0, len(a)):  # for all TRUE-nodes in boundary.mask
+            for i in range(0, self.flow.stencil.q):  # for all stencil-directions c_i (lattice.stencil.e in lettuce)
+                # check for boundary-nodes neighboring the domain-border.
+                # ...they have to take the periodicity into account...
+                # border = np.zeros(self.flow.stencil.d, dtype=int)
+                # For now I don't use solid masks on the domain border
+                # if a[p] == 0 and self.flow.stencil.e[i, 0] == -1:  # searching border on left
+                #     border[0] = -1
+                # elif a[p] == nx - 1 and self.flow.stencil.e[i, 0] == 1:  # searching border on right
+                #     border[0] = 1
+                # if b[p] == 0 and self.flow.stencil.e[i, 1] == -1:  # searching border on left
+                #     border[1] = -1
+                # elif b[p] == ny - 1 and self.flow.stencil.e[i, 1] == 1:  # searching border on right
+                #     border[1] = 1
+                try:  # try in case the neighboring cell does not exist (= an f pointing out of the simulation domain)
+                    # if not self.solid_mask[int(a[p] + self.flow.torch_stencil.e[i, 0] - border[0] * nx),
+                    # int(b[p] + self.flow.torch_stencil.e[i, 1] - border[1] * ny)]:
+                    if not self.solid_mask[int(a[p] + self.flow.torch_stencil.e[i, 0]), # x-koord solid + x-koord richtungsvektor c_i (+-1 oder 0)
+                    int(b[p] + self.flow.torch_stencil.e[i, 1])]: # y-koord solid + y-koord richtungsvektor c_i (+-1 oder 0)
+                        # if the neighbour of p is False in the boundary.mask, p is a solid node, neighbouring a fluid node:
+                        # ...the direction pointing from the fluid neighbour to solid p is marked on the solid p
+                        # OLD: self.f_mask[self.lattice.stencil.opposite[i], a[p] + self.lattice.stencil.e[i, 0], b[p] + self.lattice.stencil.e[i, 1]] = 1
+                        force_mask[self.flow.stencil.opposite[i], a[p], b[p]] = 1
+                except IndexError:
+                    pass  # just ignore this iteration since there is no neighbor there
+        return self.flow.context.convert_to_tensor(force_mask)
 
     def __call__(self, f=None):
         # rho = torch.mean(self.lattice.rho(f[:, 0, ...]))  # simple rho_mean, including the boundary region
@@ -188,8 +225,8 @@ class DragAndLiftCoefficient(Observable):
 
         rho_tmp = torch.where(self.solid_mask, self.nan, self.flow.rho(self.flow.f))
         rho = torch.nanmean(rho_tmp)
-        force_x_lu = calc_force_on_boundary(self.flow)
-        drag_lift_coefficient = force_x_lu / (
+        force_lu = self.calc_force_on_boundary()
+        drag_lift_coefficient = force_lu / (
                     0.5 * rho * self.flow.units.characteristic_velocity_lu ** 2 * self.area_lu)  # calculate drag_coefficient in LU
 
         return drag_lift_coefficient

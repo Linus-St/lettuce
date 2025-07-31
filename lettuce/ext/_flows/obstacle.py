@@ -1,3 +1,4 @@
+import math
 import warnings
 from typing import Union, List, Optional
 
@@ -52,11 +53,11 @@ class Obstacle(ExtFlow):
    """
 
     def __init__(self, context: Context, resolution: Union[int, List[int]],
-                 reynolds_number, mach_number, domain_length_x,
+                 reynolds_number, mach_number, domain_length_x, char_length_lu=None,
                  char_length=1, char_velocity=1,
                  stencil: Optional[Stencil] = None,
                  equilibrium: Optional[Equilibrium] = None):
-        self.char_length_lu = resolution[0] / domain_length_x * char_length
+        self.char_length_lu = char_length_lu if char_length_lu is not None else resolution[0] / domain_length_x * char_length
         self.char_length = char_length
         self.char_velocity = char_velocity
         self.resolution = self.make_resolution(resolution, stencil)
@@ -96,6 +97,9 @@ class Obstacle(ExtFlow):
         u_char = self.units.characteristic_velocity_pu * self._unit_vector()
         u_char = append_axes(u_char, self.stencil.d)
         u = ~self.mask * u_char
+        y_length = self.f.shape[2]
+        u[0, 40:80, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.2
+        u[1, 40:80, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.2
         return p, u
 
     @property
@@ -109,13 +113,11 @@ class Obstacle(ExtFlow):
         x = self.grid[0]
         return [
             EquilibriumBoundaryPU(context=self.context,
-                                  mask=torch.abs(x) < 1e-6,
+                                  mask=(torch.abs(x) < 1e-6) + (torch.abs(x) > (torch.abs(x).max() - 1e-6)),
                                   velocity=self.units.
                                   characteristic_velocity_pu
                                   * self._unit_vector()
                                   ),
-            AntiBounceBackOutlet(self._unit_vector().tolist(),
-                                 self),
             # EquilibriumOutletP(direction=self._unit_vector().tolist(),
             # self, rho_outlet=0),
             BounceBackBoundary(self.mask)
