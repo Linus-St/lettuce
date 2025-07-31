@@ -53,7 +53,7 @@ class Obstacle(ExtFlow):
    """
 
     def __init__(self, context: Context, resolution: Union[int, List[int]],
-                 reynolds_number, mach_number, domain_length_x,
+                 reynolds_number, mach_number, domain_length_x, char_length_lu=None,
                  char_length=1, char_velocity=1,
                  stencil: Optional[Stencil] = None,
                  equilibrium: Optional[Equilibrium] = None,
@@ -61,7 +61,7 @@ class Obstacle(ExtFlow):
                  start_point = None, end_point = None,
                  boundaries_modified = False):
         self.ref_level = ref_level
-        self.char_length_lu = resolution[0] / domain_length_x * char_length
+        self.char_length_lu = char_length_lu if char_length_lu is not None else resolution[0] / domain_length_x * char_length
         self.char_length = char_length
         self.char_velocity = char_velocity
         self.resolution = self.make_resolution(resolution, stencil)
