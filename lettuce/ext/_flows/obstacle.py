@@ -107,8 +107,8 @@ class Obstacle(ExtFlow):
         #TODO
         if self.ref_level == 0:
             y_length = self.f.shape[2]
-            u[0, 10:15, :] += torch.sin(torch.linspace(0, 2*math.pi, y_length))*0.1
-            u[1, 10:15, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.1
+            u[0, 10:20, :] += torch.sin(torch.linspace(0, 2*math.pi, y_length))*0.1
+            u[1, 10:20, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.1
         return p, u
 
     @property

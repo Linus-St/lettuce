@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
-name = './data/cylinder_benchmark/1'
+name = './data/cylinder_benchmark/2'
 
 
 def map_fine_on_coarse(fine: np.array, coarse: np.array, offset):
@@ -85,12 +85,13 @@ simulation_lvl1 = Simulation(flow_lvl1, collision_lvl1, refinement=ref2, reporte
 collision_lvl2= BGKCollision(tau=flow_lvl2.units.relaxation_parameter_lu)
 simulation_lvl2 = Simulation(flow_lvl2, collision_lvl1, reporter=[])
 
-drag_file = open(name+'/drag', "w")
-lift_file = open(name+'/lift', "w")
-drag_reporter= lt.ObservableReporter(lt.DragCoefficient(flow_lvl2), interval=reporter_time_step*2**refinement_config.refinement_level, out=drag_file)
-lift_reporter= lt.ObservableReporter(lt.LiftCoefficient(flow_lvl2), interval=reporter_time_step*2**refinement_config.refinement_level, out=lift_file)
-simulation_lvl2.reporter.append(drag_reporter)
-simulation_lvl2.reporter.append(lift_reporter)
+drag_file = open(name+'/drag_and_lift.csv', "w")
+drag_lift_reporter= lt.ObservableReporter(lt.DragAndLiftCoefficient(flow_lvl2), interval=reporter_time_step * 2 ** refinement_config.refinement_level, out=drag_file)
+simulation_lvl2.reporter.append(drag_lift_reporter)
+
+# not necessary but good for keeping track of progress
+energyreporter = lt.ObservableReporter(lt.IncompressibleKineticEnergy(flow_lvl0), interval=100)
+simulation_lvl0.reporter.append(energyreporter)
 
 ref1.coarse_simulation = simulation_lvl0
 ref1.fine_simulation = simulation_lvl1
@@ -98,14 +99,13 @@ ref1.fine_simulation = simulation_lvl1
 ref2.coarse_simulation = simulation_lvl1
 ref2.fine_simulation = simulation_lvl2
 
-refinement_config.add_vtk_reporters(name, reporter_time_step)
+# refinement_config.add_vtk_reporters(name, reporter_time_step)
 #
 refinement_config.save_to_file(name, extra_info=info)
 
-simulation_lvl0(10000)
+simulation_lvl0(25000)
 
 drag_file.close()
-lift_file.close()
 
 # u_0 = context.convert_to_ndarray(flow_lvl0.u_pu)
 # u_0_norm= np.linalg.norm(u_0, axis=0).transpose()
