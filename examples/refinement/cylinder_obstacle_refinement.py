@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
-name = './data/cylinder_benchmark/2'
+name = './data/cylinder_benchmark/3'
 
 
 def map_fine_on_coarse(fine: np.array, coarse: np.array, offset):
@@ -51,26 +51,22 @@ refinement_config = RefinementConfig([physical_length, physical_width], resoluti
 ref1 = refinement_config.add_refinement_relative(start_1, end_1)
 ref2 = refinement_config.add_refinement_relative(start_2, end_2)
 
-diam_2 = diam_0 * 4 #- 3
-radius_2 = diam_2 / 2
-
 midpoint_2 = ref2.transform.coarse_to_fine(ref1.transform.coarse_to_fine(midpoint_0))
 
 char_length_lu0 = diam_0
-char_length_pu = char_length_lu0 * physical_length / resolution[0]
 
-flow_lvl0 = Obstacle(context, resolution, reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length, char_length=char_length_pu, boundaries_modified=True)
+flow_lvl0 = Obstacle(context, resolution, reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length, char_length_lu=diam_0, boundaries_modified=True)
 
 physical_length_1 = ref1.resolution[0] * (physical_length / resolution[0]) / 2
 flow_lvl1 = Obstacle(context, list(ref1.resolution), reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length_1,
-                     ref_level=1, start_point=ref1.minimum_point_lvl0, end_point=ref1.maximum_point_lvl0, char_length=char_length_pu, boundaries_modified=True)
+                     ref_level=1, start_point=ref1.minimum_point_lvl0, end_point=ref1.maximum_point_lvl0, char_length_lu=diam_0*2, boundaries_modified=True)
 
 physical_length_2 = ref2.resolution[0] * (physical_length_1 / ref1.resolution[0]) / 2
 flow_lvl2 = Obstacle(context, list(ref2.resolution), reynolds_number=reynolds, mach_number=mach, domain_length_x=physical_length_2,
-                     ref_level=2, start_point=ref2.minimum_point_lvl0, end_point=ref2.maximum_point_lvl0, char_length=char_length_pu, boundaries_modified=True)
+                     ref_level=2, start_point=ref2.minimum_point_lvl0, end_point=ref2.maximum_point_lvl0, char_length_lu=diam_0*4, boundaries_modified=True)
 
 x, y = torch.meshgrid(torch.arange(ref2.border_length_coarse[0]*2-1), torch.arange(ref2.border_length_coarse[1]*2-1), indexing='ij')
-r = radius_2 #.25*y.max()
+r = diam_0*4/2#.25*y.max()
 x_c = midpoint_2[0] # 0.5*x.max()
 y_c = midpoint_2[1] #0.5*y.max()
 flow_lvl2.mask = ((x - x_c) ** 2 + (y - y_c) ** 2) < (r ** 2)
