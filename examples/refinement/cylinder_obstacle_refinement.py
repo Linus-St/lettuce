@@ -1,10 +1,12 @@
-from lettuce import Context, RefinementConfig, Obstacle, Simulation, BGKCollision, VTKReporter
+from lettuce import Context, RefinementConfig, Obstacle, Simulation, BGKCollision, VTKReporter, calculate_mlups_total, \
+    calculate_mlups_net
 import lettuce as lt
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+from timeit import default_timer as timer
 
-name = './data/cylinder_benchmark/3'
+name = './data/cylinder_benchmark/4'
 
 
 def map_fine_on_coarse(fine: np.array, coarse: np.array, offset):
@@ -30,7 +32,11 @@ physical_length = 10
 physical_width = 5
 
 reporter_time_step = 10
-info = f"diameter = 10 on coarse grid\nreynolds = {reynolds}, mach = {mach}\nphysical dims: ({physical_length}, {physical_width})\ntime per step on coarse: {reporter_time_step}"
+
+num_step = 100
+info = (f"diameter = 10 on coarse grid\nreynolds = {reynolds}, mach = {mach}\nphysical dims: ({physical_length}, {physical_width})\n"
+        f"time per step on coarse: {reporter_time_step}\n"
+        f"datatype: {context.dtype}")
 
 diam_0 = 15
 s = 19
@@ -99,9 +105,16 @@ ref2.fine_simulation = simulation_lvl2
 #
 refinement_config.save_to_file(name, extra_info=info)
 
-simulation_lvl0(25000)
-
+begin = timer()
+simulation_lvl0(num_step)
+end = timer()
 drag_file.close()
+
+mlups, mlups_per_lvl = calculate_mlups_total(refinement_config, num_step, begin, end)
+mlups_net, mlups_net_per_lvl = calculate_mlups_net(refinement_config, num_step, begin, end)
+
+with open(name + "/mlups.txt", "w") as file:
+    print(f"MLUPs total: {mlups} {mlups_per_lvl}\nMLUPs net: {mlups_net} {mlups_net_per_lvl}", file=file)
 
 # u_0 = context.convert_to_ndarray(flow_lvl0.u_pu)
 # u_0_norm= np.linalg.norm(u_0, axis=0).transpose()

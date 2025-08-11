@@ -47,7 +47,7 @@ class RefinementConfig:
 
     @property
     def points_per_level(self):
-        return [reduce(mul, self.resolution_lvl0)] + list(map(lambda ref: reduce(mul, ref.resolution), self.refinement_levels))
+        return [int(reduce(mul, self.resolution_lvl0))] + list(map(lambda ref: reduce(mul, ref.resolution), self.refinement_levels))
 
     @property
     def gridpoints_total(self):
@@ -91,6 +91,7 @@ class RefinementConfig:
     def __str__(self):
         result = 'base resolution: ' + str(self.resolution_lvl0) + '\n'
         result += 'refinement levels: ' + str(self.refinement_level) + '\n'
+        result += '# Grid Points: ' + str(self.gridpoints_total) + str(self.points_per_level) + '\n'
         for i, ref in enumerate(self.refinement_levels):
             result += f'===== Level {i} =====\n' + str(ref) + '\n'
         return result
