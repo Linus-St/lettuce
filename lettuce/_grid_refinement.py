@@ -1,3 +1,6 @@
+from functools import reduce
+from operator import mul
+
 import numpy as np
 import torch
 
@@ -23,6 +26,14 @@ class RefinementConfig:
     @property
     def refinement_level(self):
         return len(self.refinement_levels)
+
+    @property
+    def points_per_level(self):
+        return [reduce(mul, self.resolution_lvl0)] + list(map(lambda ref: reduce(mul, ref.resolution), self.refinement_levels))
+
+    @property
+    def gridpoints_total(self):
+        return sum(self.points_per_level)
 
     def add_refinement(self, start_physical: np.array, end_physical: np.array):
         self.add_refinement_relative(start_physical / self.dimensions_lvl0_pu[0], end_physical / self.dimensions_lvl0_pu[1])
