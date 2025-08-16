@@ -95,8 +95,9 @@ simulation_lvl1 = Simulation(flow_lvl1, collision_lvl1, refinement=ref2, reporte
 collision_lvl2= BGKCollision(tau=flow_lvl2.units.relaxation_parameter_lu)
 simulation_lvl2 = Simulation(flow_lvl2, collision_lvl1, reporter=[])
 
-drag_file = open(name+'/drag_and_lift.csv', "w")
+drag_file = None
 if enable_logging:
+    drag_file = open(name + '/drag_and_lift.csv', "w")
     drag_lift_reporter = lt.ObservableReporter(lt.DragAndLiftCoefficient(flow_lvl2), interval=reporter_time_step * 2 ** refinement_config.refinement_level, out=drag_file)
     simulation_lvl2.reporter.append(drag_lift_reporter)
 
@@ -119,7 +120,9 @@ if enable_logging:
 begin = timer()
 simulation_lvl0(num_step)
 end = timer()
-drag_file.close()
+
+if enable_logging:
+    drag_file.close()
 
 mlups, mlups_per_lvl = calculate_mlups_total(refinement_config, num_step, begin, end)
 mlups_net, mlups_net_per_lvl = calculate_mlups_net(refinement_config, num_step, begin, end)
