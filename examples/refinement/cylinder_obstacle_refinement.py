@@ -8,6 +8,13 @@ from timeit import default_timer as timer
 
 name = './data/cylinder_benchmark/4'
 
+notes = ('switched fine and coarse relaxation when calculating scaling on fine->coarse'
+         'Also fine->coarse starting only on the second overlap'
+         'Try and hit the drag and lift marks'
+         'VTK Enabled')
+
+enable_logging = True
+write_vtk = False
 
 def map_fine_on_coarse(fine: np.array, coarse: np.array, offset):
     result = coarse.repeat(2, 0).repeat(2, 1)
@@ -36,7 +43,8 @@ reporter_time_step = 10
 num_step = 100
 info = (f"diameter = 10 on coarse grid\nreynolds = {reynolds}, mach = {mach}\nphysical dims: ({physical_length}, {physical_width})\n"
         f"time per step on coarse: {reporter_time_step}\n"
-        f"datatype: {context.dtype}")
+        f"datatype: {context.dtype}\n"
+        f"---------------------------------------\n{notes}")
 
 diam_0 = 15
 s = 19
@@ -88,8 +96,9 @@ collision_lvl2= BGKCollision(tau=flow_lvl2.units.relaxation_parameter_lu)
 simulation_lvl2 = Simulation(flow_lvl2, collision_lvl1, reporter=[])
 
 drag_file = open(name+'/drag_and_lift.csv', "w")
-drag_lift_reporter= lt.ObservableReporter(lt.DragAndLiftCoefficient(flow_lvl2), interval=reporter_time_step * 2 ** refinement_config.refinement_level, out=drag_file)
-simulation_lvl2.reporter.append(drag_lift_reporter)
+if enable_logging:
+    drag_lift_reporter = lt.ObservableReporter(lt.DragAndLiftCoefficient(flow_lvl2), interval=reporter_time_step * 2 ** refinement_config.refinement_level, out=drag_file)
+    simulation_lvl2.reporter.append(drag_lift_reporter)
 
 # not necessary but good for keeping track of progress
 energyreporter = lt.ObservableReporter(lt.IncompressibleKineticEnergy(flow_lvl0), interval=100)
@@ -101,9 +110,11 @@ ref1.fine_simulation = simulation_lvl1
 ref2.coarse_simulation = simulation_lvl1
 ref2.fine_simulation = simulation_lvl2
 
-# refinement_config.add_vtk_reporters(name, reporter_time_step)
-#
-refinement_config.save_to_file(name, extra_info=info)
+if write_vtk and enable_logging:
+    refinement_config.add_vtk_reporters(name, reporter_time_step)
+
+if enable_logging:
+    refinement_config.save_to_file(name, extra_info=info)
 
 begin = timer()
 simulation_lvl0(num_step)
@@ -113,8 +124,9 @@ drag_file.close()
 mlups, mlups_per_lvl = calculate_mlups_total(refinement_config, num_step, begin, end)
 mlups_net, mlups_net_per_lvl = calculate_mlups_net(refinement_config, num_step, begin, end)
 
-with open(name + "/mlups.txt", "w") as file:
-    print(f"MLUPs total: {mlups} {mlups_per_lvl}\nMLUPs net: {mlups_net} {mlups_net_per_lvl}", file=file)
+if enable_logging:
+    with open(name + "/mlups.txt", "w") as file:
+        print(f"MLUPs total: {mlups} {mlups_per_lvl}\nMLUPs net: {mlups_net} {mlups_net_per_lvl}", file=file)
 
 # u_0 = context.convert_to_ndarray(flow_lvl0.u_pu)
 # u_0_norm= np.linalg.norm(u_0, axis=0).transpose()
