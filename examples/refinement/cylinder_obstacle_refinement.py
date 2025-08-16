@@ -113,6 +113,7 @@ ref2.fine_simulation = simulation_lvl2
 
 if write_vtk and enable_logging:
     refinement_config.add_vtk_reporters(name, reporter_time_step)
+    refinement_config.refinement_levels[-1].fine_simulation.trigger_mask_output()
 
 if enable_logging:
     refinement_config.save_to_file(name, extra_info=info)
