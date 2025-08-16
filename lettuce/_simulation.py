@@ -214,6 +214,12 @@ class Simulation:
         self._report()
         return
 
+    def trigger_mask_output(self):
+        for reporter in self.reporter:
+            if hasattr(reporter, 'output_mask') and callable(getattr(reporter, 'output_mask')):
+                reporter.output_mask(self, flow_mask=True)
+        return
+
     def __call__(self, num_steps):
         beg = timer()
 

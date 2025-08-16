@@ -68,11 +68,18 @@ class VTKReporter(Reporter):
                         simulation.flow.context.convert_to_ndarray(u[d, ...]))
             write_vtk(self.point_dict, simulation.flow.i, self.filename_base, flow_grid=self.flow_grid)
 
-    def output_mask(self, simulation: 'Simulation'):
+    def output_mask(self, simulation: 'Simulation', flow_mask=False):
         """Outputs the no_collision_mask of the simulation object as VTK-file
         with range [0,1]
+        Setting flow_mask to True instead outputs the mask attribute of the simulation's flow
         Usage: vtk_reporter.output_mask(simulation.no_collision_mask)"""
         point_dict = dict()
+
+        if flow_mask:
+            point_dict["mask"] = simulation.context.convert_to_ndarray(simulation.flow.mask).astype(int)[..., None]
+            write_vtk(point_dict, filename_base=self.filename_base + "_mask", flow_grid=self.flow_grid)
+            return
+
         if simulation.flow.stencil.d == 2:
             point_dict["mask"] = simulation.flow.context.convert_to_ndarray(
                 simulation.no_collision_mask)[..., None].astype(int)
