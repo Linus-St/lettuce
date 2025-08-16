@@ -52,7 +52,7 @@ y_res = int(s * diam_0)
 x_res = int(2 * s * diam_0)
 
 resolution = [x_res, y_res]
-midpoint_0 = np.array([y_res//2, y_res//2])
+midpoint_0 = np.array([y_res/2, y_res/2])
 
 start_1 = np.array([4/38, 4/19])
 end_1 = np.array([26/38, 15/19])
