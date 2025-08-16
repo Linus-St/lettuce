@@ -129,6 +129,7 @@ class Refinement:
     def __init__(self, minimum_coarse: list[int], maximum_coarse: list[int], minimum_lvl0: tuple[int, ...]=None, maximum_lvl0: tuple[int, ...]=None):
         self.coarse_borders = tuple(map(lambda a, b: tuple((a, b)), minimum_coarse, maximum_coarse))
         self.coarse_border_slices = tuple(map(lambda a, b: slice(a, b+1), minimum_coarse, maximum_coarse))
+        self.fine_to_coarse_slices = tuple(map(lambda a, b: slice(a+1, b), minimum_coarse, maximum_coarse))
         self.coarse_min = tuple(minimum_coarse)
         self.coarse_max = tuple(maximum_coarse)
         self.border_length_coarse = tuple(map(lambda a, b: b - a + 1, minimum_coarse, maximum_coarse))
@@ -161,10 +162,10 @@ class Refinement:
         f_eq = get_equilibrium(fine_flow, fine_flow.f_next)
 
         # kehrwert von relaxation nehmen: omega = 1/tau
-        relaxation_scaled = (2 * fine_flow.units.relaxation_parameter_lu / coarse_flow.units.relaxation_parameter_lu)
-        f_neq = fine_flow.f - f_eq
-        coarse_flow.f_next[:, *self.coarse_border_slices] = (f_eq + relaxation_scaled * f_neq)[:,
-                                     *(slice(None, None, 2),) * coarse_flow.stencil.d]
+        relaxation_scaled = (2 * coarse_flow.units.relaxation_parameter_lu / fine_flow.units.relaxation_parameter_lu)
+        f_neq = fine_flow.f_next - f_eq
+        coarse_flow.f_next[:, *self.fine_to_coarse_slices] = (f_eq + relaxation_scaled * f_neq)[:,
+                                     *(slice(2, -1, 2),) * coarse_flow.stencil.d]
         return
 
     def run_fine_sim(self, time_interpolation: bool):
