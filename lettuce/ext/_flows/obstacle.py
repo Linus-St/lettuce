@@ -59,7 +59,8 @@ class Obstacle(ExtFlow):
                  equilibrium: Optional[Equilibrium] = None,
                  ref_level :int = 0,
                  start_point = None, end_point = None,
-                 boundaries_modified = False):
+                 disturb_slice = None,
+                 boundary_index: int = 0):
         self.ref_level = ref_level
         self.char_length_lu = char_length_lu if char_length_lu is not None else resolution[0] / domain_length_x * char_length
         self.char_length = char_length
@@ -68,7 +69,8 @@ class Obstacle(ExtFlow):
         self.start_point = start_point if start_point is not None else [0]*len(self.resolution)
         self.end_point = end_point if end_point is not None else [0]*len(self.resolution)
         self._mask = torch.zeros(self.resolution, dtype=torch.bool)
-        self.boundaries_modified = boundaries_modified
+        self.boundary_index = boundary_index
+        self.disturb_slice = disturb_slice
         ExtFlow.__init__(self, context, resolution, reynolds_number,
                          mach_number, stencil, equilibrium)
 
@@ -107,8 +109,8 @@ class Obstacle(ExtFlow):
         #TODO
         if self.ref_level == 0:
             y_length = self.f.shape[2]
-            u[0, 10:20, :] += torch.sin(torch.linspace(0, 2*math.pi, y_length))*0.1
-            u[1, 10:20, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.1
+            u[0, self.disturb_slice, :] += torch.sin(torch.linspace(0, 2*math.pi, y_length))*0.1
+            u[1, self.disturb_slice, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.1
         return p, u
 
     @property
@@ -128,37 +130,27 @@ class Obstacle(ExtFlow):
     @property
     def boundaries(self):
         x = self.grid[0]
-        if not self.boundaries_modified:
-            return [
-                EquilibriumBoundaryPU(context=self.context,
-                                      mask=torch.abs(x) < 1e-6,
-                                      velocity=self.units.
-                                      characteristic_velocity_pu
-                                      * self._unit_vector()
-                                      ),
-                AntiBounceBackOutlet(self._unit_vector().tolist(),
-                                     self),
-                # EquilibriumOutletP(direction=self._unit_vector().tolist(),
-                # self, rho_outlet=0),
-                BounceBackBoundary(self.mask)
+        bounce_back = BounceBackBoundary(self.mask)
+        equilibrium_in_out = EquilibriumBoundaryPU(context=self.context,
+                                                   mask=(torch.abs(x) < 1e-6) + (torch.abs(x) > (x.max() - 1e-6)),
+                                                   velocity=self.units.
+                                                   characteristic_velocity_pu
+                                                            * self._unit_vector()
+                                                   )
+        boundary_configs = [
+            [   # 0: no refinement
+                equilibrium_in_out,
+                bounce_back
+            ], [
+                # 1: most coarse grid
+                equilibrium_in_out
+            ],
+            [ ], # 2: intermediate grid
+            [   # 3: finest grid, containing the obstacle
+                bounce_back
             ]
-        match self.ref_level:
-            case 0:
-                return [
-                    EquilibriumBoundaryPU(context=self.context,
-                                          mask= (torch.abs(x) < 1e-6) + (torch.abs(x) > (x.max() - 1e-6)),
-                                          velocity=self.units.
-                                          characteristic_velocity_pu
-                                                   * self._unit_vector()
-                                          )
-                ]
-            case 1:
-                return []
-            case 2:
-                return [
-                    BounceBackBoundary(self.mask)
-                ]
-        return None
+        ]
+        return boundary_configs[self.boundary_index]
 
     #
     # def create_fine_flow(self, transform: Transformation, reynolds_number, mach_number, domain_length_x):
