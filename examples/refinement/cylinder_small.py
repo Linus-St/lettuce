@@ -26,15 +26,15 @@ scaling_factor = 9
 diameter_finest = 30
 
 class ObstacleParams:
-    def __init__(self, context, resolution, reynolds, mach, domain_len):
+    def __init__(self, context, resolution, reynolds, mach, physical_dims):
         self.context = context
         self.resolution = resolution
         self.reynolds = reynolds
         self.mach = mach
-        self.domain_len = domain_len
+        self.physical_dims = physical_dims
 
     def get(self):
-        return [self.context, self.resolution, self.reynolds, self.mach, self.domain_len]
+        return [self.context, self.resolution, self.reynolds, self.mach, self.physical_dims[0]]
 
 
 def generate_resolution(diameter):
