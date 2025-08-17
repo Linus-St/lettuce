@@ -21,11 +21,12 @@ class OnceRefinedBenchmark(BenchmarkCase):
         self.obstacle_params = obst_params
         self.log = logging
         self.set_directories(base_dir, "once_refined")
+        self.create_directories()
         self.generate_simulation()
         self.set_reporters()
 
     def run(self):
-        shutil.copyfile(os.path.basename(__file__), os.path.join(self.directories.get("once_refined"), os.path.basename(__file__)))
+        shutil.copyfile(os.path.basename(__file__), os.path.join(self.directories.get("case_dir"), os.path.basename(__file__)))
         if self.log.vtk:
             self.refinement_config.refinement_levels[-1].fine_simulation.trigger_mask_output()
         start = timer()
@@ -33,7 +34,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
         end = timer()
         mlups, per_level = calculate_mlups_total(self.refinement_config, self.simulation_params.steps_coarse, start, end)
         mlups_net, net_per_level = calculate_mlups_net(self.refinement_config, self.simulation_params.steps_coarse, start, end)
-        with open(self.directories.get("case_dir") + "mlups.txt", "w") as f:
+        with open(os.path.join(self.directories.get("case_dir") + os.path.sep + "mlups.txt"), "w") as f:
             print(f"Mlups_total: {mlups}, {per_level}\n"
                   f"Mlups_net: {mlups_net}, {net_per_level}", file=f)
         return
@@ -46,7 +47,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
         last_simulation = self.refinement_config.refinement_levels[-1].fine_simulation
 
         if self.log.drag_lift:
-            d_l_reporter = self.generate_drag_lift_rep(self.simulation_params.report_steps_coarse * 2)
+            d_l_reporter = self.generate_drag_lift_rep(self.simulation_params.report_steps_coarse * 2, last_simulation)
             last_simulation.reporter += [d_l_reporter]
 
         energy_reporter = self.generate_energyrep()
@@ -69,7 +70,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
         flow_lvl1 = lt.Obstacle(*self.obstacle_params.get(), char_length_lu=self.simulation_params.diameter_finest, ref_level=1,
                              start_point=ref0.minimum_point_lvl0, end_point=ref0.maximum_point_lvl0, boundary_index=3)
 
-        midpoint = ref0.transform.coarse_to_fine(np.array([res_lvl0[1] / 2] * 2))
+        midpoint = ref0.transform.coarse_to_fine(np.array([res_lvl0[1] / 2] * 2).astype(int))
         flow_lvl1.mask = self.generate_mask(*ref0.resolution, midpoint)
 
         sim_0 = lt.Simulation(flow_lvl0, self.generate_collision(flow_lvl0), [])

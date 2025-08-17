@@ -59,16 +59,18 @@ class BenchmarkCase(ABC):
     def generate_energyrep(self):
         return lt.ObservableReporter(lt.IncompressibleKineticEnergy(self.simulation.flow), interval=100)
 
-    def generate_drag_lift_rep(self, reporting_steps):
-        return lt.ObservableReporter(lt.DragAndLiftCoefficient(self.simulation.flow), interval=reporting_steps)
+    def generate_drag_lift_rep(self, reporting_steps, simulation = None):
+        sim = self.simulation if simulation is None else simulation
+        outfile = self.directories.get("case_dir") + os.path.sep + "drag_lift.csv"
+        return lt.ObservableReporter(lt.DragAndLiftCoefficient(sim.flow), interval=reporting_steps, out=outfile)
 
     def generate_vtk_rep(self, reporting_steps):
-        return lt.VTKReporter(interval=reporting_steps, filename_base=self.directories.get("vtk"), flow_grid=self.simulation.flow)
+        return lt.VTKReporter(interval=reporting_steps, filename_base=self.directories.get("vtk") + os.path.sep + "control", flow_grid=self.simulation.flow.grid)
 
     def set_directories(self, base_dir: str, case_name: str):
         self.directories["case_dir"] = os.path.join(base_dir, case_name)
         if self.log.vtk:
-            self.directories["vtk_dir"] = os.path.join(self.directories["case_dir"], "vtk")
+            self.directories["vtk"] = os.path.join(self.directories["case_dir"], "vtk")
         return
 
     def create_directories(self):

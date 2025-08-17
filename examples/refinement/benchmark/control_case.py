@@ -14,6 +14,7 @@ class ControlBenchmark(BenchmarkCase):
         self.obstacle_params = obst_params
         self.log = logging
         self.set_directories(base_dir, "control")
+        self.create_directories()
         self.generate_simulation()
         self.set_reporters()
 
@@ -43,14 +44,13 @@ class ControlBenchmark(BenchmarkCase):
         pass
 
     def run(self):
-        # TODO
-        shutil.copy(os.path.basename(__file__), os.path.join(self.directories.get("control"), os.path.basename(__file__)))
+        shutil.copy(os.path.basename(__file__), os.path.join(self.directories.get("case_dir"), os.path.basename(__file__)))
         if self.log.vtk:
             self.simulation.trigger_mask_output()
 
-        mlups = self.simulation(self.simulation_params.steps_coarse)
+        mlups = self.simulation(self.simulation_params.steps_coarse * 2)
 
         if self.log.mlups:
-            with open(self.directories.get("case_dir") + "mlups.txt", "w") as f:
+            with open(os.path.join(self.directories.get("case_dir") + os.path.sep + "mlups.txt"), "w") as f:
                 print(f"Mlups: {mlups}", file=f)
         return
