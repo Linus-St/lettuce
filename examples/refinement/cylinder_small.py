@@ -25,6 +25,13 @@ physical_dims = [2, 1]
 scaling_factor = 9
 diameter_finest = 30
 
+class SimulationParams:
+    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest):
+        self.steps_coarse = steps_coarse
+        self.scaling = scaling
+        self.diameter_finest = diameter_finest
+        self.report_steps_coarse = report_steps_coarse
+
 class ObstacleParams:
     def __init__(self, context, resolution, reynolds, mach, physical_dims):
         self.context = context
