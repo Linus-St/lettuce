@@ -271,5 +271,8 @@ class ObservableReporter(Reporter):
                      + observed)
             if isinstance(self.out, list):
                 self.out.append(entry)
+            if isinstance(self.out, str):
+                with open(self.out, 'a') as f:
+                    print(*entry, file=f)
             else:
                 print(*entry, file=self.out)
