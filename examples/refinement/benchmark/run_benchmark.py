@@ -1,14 +1,18 @@
 import shutil
 
-from examples.refinement.benchmark.benchmark_case import BenchmarkCase, LoggingConfig
+from examples.refinement.benchmark.benchmark_case import BenchmarkCase
 from examples.refinement.benchmark.control_case import ControlBenchmark
 from examples.refinement.benchmark.refined_case import OnceRefinedBenchmark
-from examples.refinement.cylinder_small import SimulationParams, ObstacleParams
 
 import os
 
 import lettuce as lt
 
+class LoggingConfig:
+    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool):
+        self.vtk = vtk
+        self.mlups = mlups
+        self.drag_lift = drag_lift
 
 class BenchmarkRunner:
 
@@ -42,3 +46,23 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+class SimulationParams:
+    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest):
+        self.steps_coarse = steps_coarse
+        self.scaling = scaling
+        self.diameter_finest = diameter_finest
+        self.report_steps_coarse = report_steps_coarse
+
+
+class ObstacleParams:
+    def __init__(self, context, resolution, reynolds, mach, physical_dims):
+        self.context = context
+        self.resolution = resolution
+        self.reynolds = reynolds
+        self.mach = mach
+        self.physical_dims = physical_dims
+
+    def get(self):
+        return [self.context, self.resolution, self.reynolds, self.mach, self.physical_dims[0]]

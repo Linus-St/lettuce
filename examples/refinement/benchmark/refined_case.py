@@ -1,8 +1,8 @@
 import os.path
 import shutil
 
-from examples.refinement.benchmark.benchmark_case import BenchmarkCase, LoggingConfig
-from examples.refinement.cylinder_small import ObstacleParams, SimulationParams
+from examples.refinement.benchmark.benchmark_case import BenchmarkCase
+from examples.refinement.benchmark.run_benchmark import LoggingConfig, SimulationParams, ObstacleParams
 
 import lettuce as lt
 import numpy as np

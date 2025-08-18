@@ -4,18 +4,11 @@ from abc import ABC, abstractmethod
 import torch
 
 import lettuce as lt
-from examples.refinement.cylinder_small import SimulationParams, ObstacleParams
+from examples.refinement.benchmark.run_benchmark import LoggingConfig, SimulationParams, ObstacleParams
 
-
-class LoggingConfig:
-    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool):
-        self.vtk = vtk
-        self.mlups = mlups
-        self.drag_lift = drag_lift
 
 def generate_collision(flow: lt.Obstacle):
     return lt.BGKCollision(flow.units.relaxation_parameter_lu)
-
 
 class BenchmarkCase(ABC):
 
