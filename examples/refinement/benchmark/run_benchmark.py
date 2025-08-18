@@ -14,6 +14,24 @@ class LoggingConfig:
         self.mlups = mlups
         self.drag_lift = drag_lift
 
+class SimulationParams:
+    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest):
+        self.steps_coarse = steps_coarse
+        self.scaling = scaling
+        self.diameter_finest = diameter_finest
+        self.report_steps_coarse = report_steps_coarse
+
+class ObstacleParams:
+    def __init__(self, context, resolution, reynolds, mach, physical_dims):
+        self.context = context
+        self.resolution = resolution
+        self.reynolds = reynolds
+        self.mach = mach
+        self.physical_dims = physical_dims
+
+    def get(self):
+        return [self.context, self.resolution, self.reynolds, self.mach, self.physical_dims[0]]
+
 class BenchmarkRunner:
 
     benchmarks: list[BenchmarkCase]
@@ -46,23 +64,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-class SimulationParams:
-    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest):
-        self.steps_coarse = steps_coarse
-        self.scaling = scaling
-        self.diameter_finest = diameter_finest
-        self.report_steps_coarse = report_steps_coarse
-
-
-class ObstacleParams:
-    def __init__(self, context, resolution, reynolds, mach, physical_dims):
-        self.context = context
-        self.resolution = resolution
-        self.reynolds = reynolds
-        self.mach = mach
-        self.physical_dims = physical_dims
-
-    def get(self):
-        return [self.context, self.resolution, self.reynolds, self.mach, self.physical_dims[0]]
