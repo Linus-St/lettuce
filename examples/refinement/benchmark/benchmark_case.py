@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 import torch
 
 import lettuce as lt
-from examples.refinement.benchmark.run_benchmark import LoggingConfig, SimulationParams, ObstacleParams
 
 
 def generate_collision(flow: lt.Obstacle):
@@ -14,10 +13,10 @@ class BenchmarkCase(ABC):
 
     simulation: lt.Simulation
     directories: dict[str, str]
-    log: LoggingConfig
+    log: 'LoggingConfig'
 
-    simulation_params: SimulationParams
-    obstacle_params: ObstacleParams
+    simulation_params: 'SimulationParams'
+    obstacle_params: 'ObstacleParams'
 
     @abstractmethod
     def __init__(self):

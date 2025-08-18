@@ -2,13 +2,12 @@ import os
 import shutil
 
 from examples.refinement.benchmark.benchmark_case import BenchmarkCase
-from examples.refinement.benchmark.run_benchmark import LoggingConfig, SimulationParams, ObstacleParams
 import lettuce as lt
 
 
 class ControlBenchmark(BenchmarkCase):
 
-    def __init__(self, base_dir: str, sim_params: SimulationParams, obst_params: ObstacleParams, logging: LoggingConfig):
+    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig'):
         self.directories = dict()
         self.simulation_params = sim_params
         self.obstacle_params = obst_params
