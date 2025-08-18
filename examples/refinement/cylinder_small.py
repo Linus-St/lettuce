@@ -4,6 +4,7 @@ from timeit import default_timer as timer
 
 import numpy as np
 
+from examples.refinement.benchmark.run_benchmark import ObstacleParams
 from lettuce import RefinementConfig, calculate_mlups_total, calculate_mlups_net
 from lettuce.ext import Obstacle
 import lettuce as lt
@@ -24,25 +25,6 @@ physical_dims = [2, 1]
 
 scaling_factor = 9
 diameter_finest = 30
-
-class SimulationParams:
-    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest):
-        self.steps_coarse = steps_coarse
-        self.scaling = scaling
-        self.diameter_finest = diameter_finest
-        self.report_steps_coarse = report_steps_coarse
-
-class ObstacleParams:
-    def __init__(self, context, resolution, reynolds, mach, physical_dims):
-        self.context = context
-        self.resolution = resolution
-        self.reynolds = reynolds
-        self.mach = mach
-        self.physical_dims = physical_dims
-
-    def get(self):
-        return [self.context, self.resolution, self.reynolds, self.mach, self.physical_dims[0]]
-
 
 def generate_resolution(diameter):
     return [2*scaling_factor*diameter, scaling_factor*diameter]
