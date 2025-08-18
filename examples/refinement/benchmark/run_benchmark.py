@@ -2,7 +2,6 @@ import shutil
 
 from examples.refinement.benchmark.benchmark_case import BenchmarkCase
 from examples.refinement.benchmark.control_case import ControlBenchmark
-from examples.refinement.benchmark.refined_case import OnceRefinedBenchmark
 
 import os
 
