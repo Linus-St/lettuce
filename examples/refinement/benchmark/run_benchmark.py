@@ -56,7 +56,6 @@ def main():
     logging = LoggingConfig(True, True, True)
     runner = BenchmarkRunner()
     runner.benchmarks.append(ControlBenchmark(base_dir, simulation_parameters, obstacle_parameters, logging))
-    runner.benchmarks.append(OnceRefinedBenchmark(base_dir, simulation_parameters, obstacle_parameters, logging))
     shutil.copy(os.path.basename(__file__), base_dir)
     runner.run()
     return
