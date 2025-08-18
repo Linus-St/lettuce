@@ -56,12 +56,14 @@ class Obstacle(ExtFlow):
                  reynolds_number, mach_number, domain_length_x, char_length_lu=None,
                  char_length=1, char_velocity=1,
                  stencil: Optional[Stencil] = None,
+                 disturb_slice = None,
                  equilibrium: Optional[Equilibrium] = None):
         self.char_length_lu = char_length_lu if char_length_lu is not None else resolution[0] / domain_length_x * char_length
         self.char_length = char_length
         self.char_velocity = char_velocity
         self.resolution = self.make_resolution(resolution, stencil)
         self._mask = torch.zeros(self.resolution, dtype=torch.bool)
+        self.disturb_slice = disturb_slice
         ExtFlow.__init__(self, context, resolution, reynolds_number,
                          mach_number, stencil, equilibrium)
 
@@ -98,8 +100,8 @@ class Obstacle(ExtFlow):
         u_char = append_axes(u_char, self.stencil.d)
         u = ~self.mask * u_char
         y_length = self.f.shape[2]
-        u[0, 40:80, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.2
-        u[1, 40:80, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.2
+        u[0, self.disturb_slice, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.1
+        u[1, self.disturb_slice, :] += torch.sin(torch.linspace(0, 2 * math.pi, y_length)) * 0.1
         return p, u
 
     @property

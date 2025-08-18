@@ -58,7 +58,7 @@ class BenchmarkCase(ABC):
         return lt.ObservableReporter(lt.DragAndLiftCoefficient(sim.flow), interval=reporting_steps, out=outfile)
 
     def generate_vtk_rep(self, reporting_steps):
-        return lt.VTKReporter(interval=reporting_steps, filename_base=self.directories.get("vtk") + os.path.sep + "control", flow_grid=self.simulation.flow.grid)
+        return lt.VTKReporter(interval=reporting_steps, filename_base=self.directories.get("vtk") + os.path.sep + "control")
 
     def set_directories(self, base_dir: str, case_name: str):
         self.directories["case_dir"] = os.path.join(base_dir, case_name)

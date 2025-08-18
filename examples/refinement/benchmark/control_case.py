@@ -45,8 +45,6 @@ class ControlBenchmark(BenchmarkCase):
 
     def run(self):
         shutil.copy(os.path.basename(__file__), os.path.join(self.directories.get("case_dir"), os.path.basename(__file__)))
-        if self.log.vtk:
-            self.simulation.trigger_mask_output()
 
         mlups = self.simulation(self.simulation_params.steps_coarse * 2)
 
