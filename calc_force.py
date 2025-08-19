@@ -19,15 +19,21 @@ def calc_lift(data):
     v = -data[valleys]
     return numpy.average(np.append(data[peaks], -data[valleys]))
 
-df = import_csv(name)
-time = df["time"].to_numpy()
-drag = df["drag"].to_numpy()
-lift = df["lift"].to_numpy()
+def calculate(file):
+    df = import_csv(file)
+    time = df["time"].to_numpy()
+    drag = df["drag"].to_numpy()
+    lift = df["lift"].to_numpy()
 
-indices = np.where(time > 50)
+    indices = np.where(time > 80)
 
-print("Drag: ", calc_drag(drag[indices]))
-print("Lift: ", calc_lift(lift[indices]))
+    print("Drag: ", calc_drag(drag[indices]))
+    print("Lift: ", calc_lift(lift[indices]))
+
+def main():
+    return
+if __name__ == '__main__':
+    main()
 
 
 
