@@ -248,15 +248,16 @@ class Flow(ABC):
             self._f_next = self.context.empty_tensor(self.f.shape)
 
     def interpolate_on_border(self, coarse_values: torch.Tensor):
-        # interpolate position between b and c
-        interpolate_4 = lambda a, b, c, d: (9/16)*(b + c) - (1/16)*(a + d)
-        # interpolate position between a and b
-        interpolate_3 = lambda a, b, c: (3/8)*a + (3/4)*b - (1/8)*c
-        interpolated_values = torch.zeros(coarse_values.size(dim=0), coarse_values.size(dim=1) - 1)
-        interpolated_values[:, 0] = interpolate_3(coarse_values[:, 0], coarse_values[:, 1], coarse_values[:, 2])
-        interpolated_values[:, -1] = interpolate_3(coarse_values[:, -1], coarse_values[:, -2], coarse_values[:, -3])
-        for i in range(1, interpolated_values.size(dim=1) - 1):
-            interpolated_values[:, i] = interpolate_4(coarse_values[:, i-1], coarse_values[:, i], coarse_values[:, i+1], coarse_values[:, i+2])
+        a = coarse_values[:, :-3]
+        b = coarse_values[:, 1:-2]
+        c = coarse_values[:, 2:-1]
+        d = coarse_values[:, 3:]
+        e = coarse_values[:, (0, -1)]
+        f = coarse_values[:, (1, -2)]
+        g = coarse_values[:, (2, -3)]
+        interpolated_values = self.context.convert_to_tensor(torch.zeros(coarse_values.size(dim=0), coarse_values.size(dim=1) - 1))
+        interpolated_values[:, (0, -1)] = interpolate_3(e, f, g)
+        interpolated_values[:, 1:-1] = interpolate_4(a, b, c, d)
 
         return interpolated_values
 
@@ -291,6 +292,14 @@ class Flow(ABC):
         #     self.f_next[:, 1::2, 1::2, -1] = self.interpolate_on_border(self.f_next[:, ::2, ::2, 0])
 
         return
+
+# interpolate position between b and c
+def interpolate_4(a, b, c, d):
+    return (9/16)*(b + c) - (1/16)*(a + d)
+
+# interpolate position between a and b
+def interpolate_3(a, b, c):
+    return (3/8)*a + (3/4)*b - (1/8)*c
 
 def pressure_poisson(units: 'UnitConversion', u, rho0, tol_abs=1e-10,
                      max_num_steps=100000):
