@@ -3,6 +3,7 @@ import shutil
 
 
 import os
+import subprocess
 
 import lettuce as lt
 from examples.refinement.benchmark.benchmark_case import BenchmarkCase
@@ -93,6 +94,8 @@ def main():
 
     with open(os.path.join(base_dir, "args.txt"), "w") as f:
         f.write(str(args))
+        f.write("\n")
+        f.write("Git Hash: " + subprocess.getoutput("git rev-parse HEAD"))
 
     context = lt.Context("cuda:0", use_native=False)
     obs.context = context

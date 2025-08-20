@@ -43,7 +43,7 @@ class ControlBenchmark(BenchmarkCase):
         pass
 
     def run(self):
-        shutil.copy(os.path.basename(__file__), os.path.join(self.directories.get("case_dir"), os.path.basename(__file__)))
+        shutil.copy(__file__, self.directories.get("case_dir"))
         if self.log.vtk:
             self.simulation.trigger_mask_output()
 

@@ -25,7 +25,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
         self.set_reporters()
 
     def run(self):
-        shutil.copyfile(os.path.basename(__file__), os.path.join(self.directories.get("case_dir"), os.path.basename(__file__)))
+        shutil.copy(__file__, self.directories.get("case_dir"))
         if self.log.vtk:
             self.refinement_config.refinement_levels[-1].fine_simulation.trigger_mask_output()
         start = timer()
