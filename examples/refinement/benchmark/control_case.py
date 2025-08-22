@@ -28,18 +28,20 @@ class ControlBenchmark(BenchmarkCase):
         flow = lt.Obstacle(*self.obstacle_params.get(), char_length_lu=self.simulation_params.diameter_finest, disturb_slice=slice(10, 20))
         midpoint = [self.obstacle_params.resolution[1] / 2] * 2
 
-        flow.mask = self.generate_mask(self.obstacle_params.resolution[0], self.obstacle_params.resolution[1], midpoint)
+        flow.mask = self.generate_mask(*self.obstacle_params.resolution, midpoint)
 
         self.simulation = lt.Simulation(flow, self.generate_collision(flow), reporter=[])
         return
 
-    # TODO report steps faktor noch Variabel, je nachdem womit man am ende vergleichen will
     def set_reporters(self):
-        d_l_reporter = self.generate_drag_lift_rep(self.simulation_params.report_steps_coarse * 2)
-        vtk_reporter = self.generate_vtk_rep(self.simulation_params.report_steps_coarse * 2)
-        energy_reporter = self.generate_energyrep()
+        if self.log.drag_lift:
+            d_l_reporter = self.generate_drag_lift_rep(self.simulation_params.report_steps_coarse * 2**self.simulation_params.refinement_levels)
+            self.simulation.reporter += [d_l_reporter]
+        if self.log.vtk:
+            vtk_reporter = self.generate_vtk_rep(self.simulation_params.report_steps_coarse * 2**self.simulation_params.refinement_levels)
+            self.simulation.reporter += [vtk_reporter]
 
-        self.simulation.reporter += [d_l_reporter, vtk_reporter, energy_reporter]
+        self.simulation.reporter += [self.generate_energyrep()]
         pass
 
     def run(self):

@@ -53,6 +53,10 @@ class RefinementConfig:
     def gridpoints_total(self):
         return sum(self.points_per_level)
 
+    @property
+    def pointlength_pu(self):
+        return self.dimensions_lvl0_pu / self.resolution_lvl0
+
     def add_refinement(self, start_physical: np.array, end_physical: np.array):
         self.add_refinement_relative(start_physical / self.dimensions_lvl0_pu[0], end_physical / self.dimensions_lvl0_pu[1])
         return
@@ -107,9 +111,8 @@ class Refinement:
     # coarse_borders: [x_min, x_max], [y_min, y_max] as indices in coarse grid
     # coarse_border_slices: slices to access the areas between and including x_min, x_max ...
     # border_length_coarse: number of coarse points in the refined domain,  x_max - x_min + 1
-    # TODO beschreibung korrekt, ist das äußerste grid
-    # minimum_point_lvl0: point in coarse grid, where refinement begins, Point (x_min, y_min)
-    # maximum_point_lvl0: point in coarse grid, where refinement ends, Point (x_max, y_max)
+    # minimum_point_lvl0: point in most coarse grid, where refinement begins, Point (x_min, y_min) in coarsest coords
+    # maximum_point_lvl0: point in most coarse grid, where refinement ends, Point (x_max, y_max) in coarsest coords
     # transformation: transformation class to transform indices between coarse and fine grid
     # coarse_simulation: simulation that handles simulating the coarse domain
     # fine_simulation: simulation that handles simulating the fine domain
@@ -189,6 +192,12 @@ class Refinement:
         self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
 
         self.fine_simulation.trigger_reporter()
+        return
+
+    def set_simulations(self, coarse, fine):
+        self.coarse_simulation = coarse
+        self.fine_simulation = fine
+        coarse.refinement = self
         return
 
     def __str__(self):

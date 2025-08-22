@@ -8,6 +8,7 @@ import subprocess
 import lettuce as lt
 from examples.refinement.benchmark.benchmark_case import BenchmarkCase
 from examples.refinement.benchmark.control_case import ControlBenchmark
+from examples.refinement.benchmark.multi_refinement_case import MultiRefinedBenchmark
 from examples.refinement.benchmark.refined_case import OnceRefinedBenchmark
 
 
@@ -18,11 +19,13 @@ class LoggingConfig:
         self.drag_lift = drag_lift
 
 class SimulationParams:
-    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest):
+    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space):
         self.steps_coarse = steps_coarse
         self.scaling = scaling
         self.diameter_finest = diameter_finest
         self.report_steps_coarse = report_steps_coarse
+        self.refinement_levels = ref_levels
+        self.space = space
 
 class ObstacleParams:
     def __init__(self, context, resolution, reynolds, mach, physical_dims):
@@ -52,15 +55,18 @@ def get_arguments():
     # logging (3 an-aus optionen)
     # reynolds, mach, dimensions: 1, 1, 2 number optionen (optional mit default Werten?)
     # diameter, scaling: jeweils 1 integer, nicht optional
+    # refinement_levels: Wie of soll refined werden?
     # num_steps, report_timing: jeweils 1 int, num_steps nicht optional, timing opt?
-    # welche Benchmarks man überhaupt möchte. Aktuell nur 2 Stück, muss erweiterbar sein
+    # welche Benchmarks man überhaupt möchte. Aktuell nur 3 Stück, muss erweiterbar sein
     # optional flag to not run any simulations/create any dirs for debugging purposes
     parser.add_argument("name", type=str, help="Name of output directory")
     parser.add_argument("steps", type=int, help="Number of steps to run the simulation on the most coarse level")
     parser.add_argument("diameter", type=int, help="Diameter of the simulation on the finest level")
     parser.add_argument("scaling", type=int, help="How many times the diameter should fit into y - direction")
+    parser.add_argument("refinement_levels", default=1, type=int, help="Number of refinement levels to use")
+    parser.add_argument("space", type=float, help="Distance between cylinder and finest refinement level, with 1 being one diameter.")
 
-    parser.add_argument("--benchmarks", nargs="*", choices=["control", "once_refined"], default="control", help="List of benchmarks to run (default control)")
+    parser.add_argument("--benchmarks", nargs="*", choices=["control", "once_refined", "multi_refined"], default="control", help="List of benchmarks to run (default control)")
     parser.add_argument("--report_time", type=int, default=25, help="After how many steps on the coarsest level do we trigger reporting")
     parser.add_argument("--no_running", action="store_true", help="Do not run any simulation. Helpful for debugging purposes")
 
@@ -71,16 +77,17 @@ def get_arguments():
 
     log = parser.add_argument_group("Reporting", "Which data do we want to report")
     log.add_argument("-v", "--vtk", action="store_true", help="Use vtk reporter")
-    log.add_argument("-m", "--mlups", action="store_true", help="Save MLups")
+    log.add_argument("--mlups", action="store_true", help="Save MLups")
     log.add_argument("-f", "--force", action="store_true", help="Use Drag and Lift Reporter")
 
 
     return parser.parse_args()
 
 def handle_arguments(args: argparse.Namespace):
+    assert args.diameter % (2**args.refinement_levels) == 0
     reporter_config = LoggingConfig(args.vtk, args.mlups, args.force)
     obstacle_params = ObstacleParams(None, None, args.reynolds, args.mach, args.dimensions)
-    simulation_params = SimulationParams(args.steps, args.report_time, args.scaling, args.diameter)
+    simulation_params = SimulationParams(args.steps, args.report_time, args.scaling, args.diameter, args.refinement_levels, args.space)
     return reporter_config, obstacle_params, simulation_params
 
 
@@ -105,6 +112,8 @@ def main():
         runner.benchmarks.append(ControlBenchmark(base_dir, sim, obs, rep))
     if "once_refined" in args.benchmarks:
         runner.benchmarks.append(OnceRefinedBenchmark(base_dir, sim, obs, rep))
+    if "multi_refined" in args.benchmarks:
+        runner.benchmarks.append(MultiRefinedBenchmark(base_dir, sim, obs, rep))
     shutil.copy(__file__, base_dir)
 
     if args.no_running:

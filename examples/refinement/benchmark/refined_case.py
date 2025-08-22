@@ -31,11 +31,12 @@ class OnceRefinedBenchmark(BenchmarkCase):
         start = timer()
         self.simulation(int(self.simulation_params.steps_coarse))
         end = timer()
-        mlups, per_level = calculate_mlups_total(self.refinement_config, self.simulation_params.steps_coarse, start, end)
-        mlups_net, net_per_level = calculate_mlups_net(self.refinement_config, self.simulation_params.steps_coarse, start, end)
-        with open(os.path.join(self.directories.get("case_dir") + os.path.sep + "mlups.txt"), "w") as f:
-            print(f"Mlups_total: {mlups}, {per_level}\n"
-                  f"Mlups_net: {mlups_net}, {net_per_level}", file=f)
+        if self.log.mlups:
+            mlups, per_level = calculate_mlups_total(self.refinement_config, self.simulation_params.steps_coarse, start, end)
+            mlups_net, net_per_level = calculate_mlups_net(self.refinement_config, self.simulation_params.steps_coarse, start, end)
+            with open(os.path.join(self.directories.get("case_dir") + os.path.sep + "mlups.txt"), "w") as f:
+                print(f"Mlups_total: {mlups}, {per_level}\n"
+                      f"Mlups_net: {mlups_net}, {net_per_level}", file=f)
         return
 
     def set_reporters(self):
@@ -75,10 +76,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
         sim_0 = lt.Simulation(flow_lvl0, self.generate_collision(flow_lvl0), [])
         sim_1 = lt.Simulation(flow_lvl1, self.generate_collision(flow_lvl1), [])
 
-        # TODO das kann ein Aufruf in ref1 sein
-        sim_0.refinement = ref0
-        ref0.coarse_simulation = sim_0
-        ref0.fine_simulation = sim_1
+        ref0.set_simulations(sim_0, sim_1)
 
         self.refinement_config = config
         self.simulation = sim_0

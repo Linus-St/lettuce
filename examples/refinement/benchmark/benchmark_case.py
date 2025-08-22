@@ -34,10 +34,6 @@ class BenchmarkCase(ABC):
     def generate_simulation(self):
         pass
 
-    @abstractmethod
-    def resolution(self):
-        pass
-
     def generate_mask(self, x_res, y_res, midpoint):
         x, y = torch.meshgrid(torch.arange(x_res), torch.arange(y_res), indexing='ij')
         r = self.simulation_params.diameter_finest / 2
