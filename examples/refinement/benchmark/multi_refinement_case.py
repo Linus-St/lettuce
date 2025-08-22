@@ -13,18 +13,9 @@ from lettuce import calculate_mlups_total, calculate_mlups_net
 class MultiRefinedBenchmark(BenchmarkCase):
 
     refinement_config: 'RefinementConfig'
-    base_diameter: int
 
-    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig'):
-        self.directories = dict()
-        self.simulation_params = sim_params
-        self.obstacle_params = obst_params
-        self.log = logging
-        self.base_diameter = int(sim_params.diameter_finest / 2**sim_params.refinement_levels)
-        self.set_directories(base_dir, "multi_refined")
-        self.create_directories()
-        self.generate_simulation()
-        self.set_reporters()
+    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig', disturb_slice: slice):
+        super().__init__(base_dir, sim_params, obst_params, logging, disturb_slice, "multi_refined")
 
     def generate_simulation(self):
         assert(self.simulation_params.refinement_levels > 0)
@@ -32,7 +23,6 @@ class MultiRefinedBenchmark(BenchmarkCase):
         self.refinement_config = lt.RefinementConfig(self.obstacle_params.physical_dims, res_lvl0)
 
         # creating refinements
-        space_from_cyl = 2*self.base_diameter
         start, end = self.refinement_borders()
         refinements = []
         for i in range(len(start)):
@@ -103,16 +93,15 @@ class MultiRefinedBenchmark(BenchmarkCase):
         return
 
     def base_resolution(self):
-        diameter_coarse = self.simulation_params.diameter_finest / 2**self.simulation_params.refinement_levels
-        y = int(diameter_coarse * self.simulation_params.scaling)
+        y = int(self.simulation_params.base_diameter * self.simulation_params.scaling)
         x = int(2*y)
         return [x, y]
 
     def refinement_borders(self):
         midpoint_y = self.refinement_config.resolution_lvl0[1]/2
-        radius_base = self.base_diameter / 2
-        lower_bound = midpoint_y - radius_base - int(self.simulation_params.space * self.base_diameter)
-        upper_bound = midpoint_y + radius_base + int(self.simulation_params.space * self.base_diameter)
+        radius_base = self.simulation_params.base_diameter / 2
+        lower_bound = midpoint_y - radius_base - int(self.simulation_params.space * self.simulation_params.base_diameter)
+        upper_bound = midpoint_y + radius_base + int(self.simulation_params.space * self.simulation_params.base_diameter)
 
         start_indices_y = np.linspace(0, lower_bound, num=self.simulation_params.refinement_levels + 1, endpoint=True, dtype=int)[1:]
         end_indices_y = np.linspace(upper_bound, self.refinement_config.resolution_lvl0[1], num=self.simulation_params.refinement_levels, endpoint=False, dtype=int)

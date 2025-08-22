@@ -19,8 +19,16 @@ class BenchmarkCase(ABC):
     obstacle_params: 'ObstacleParams'
 
     @abstractmethod
-    def __init__(self):
-        pass
+    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig', disturb_slice: slice, case_name: str):
+        self.directories = dict()
+        self.simulation_params = sim_params
+        self.obstacle_params = obst_params
+        self.log = logging
+        self.disturbance_slice = disturb_slice
+        self.set_directories(base_dir, case_name)
+        self.create_directories()
+        self.generate_simulation()
+        self.set_reporters()
 
     @abstractmethod
     def run(self):

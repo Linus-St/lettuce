@@ -26,6 +26,7 @@ class SimulationParams:
         self.report_steps_coarse = report_steps_coarse
         self.refinement_levels = ref_levels
         self.space = space
+        self.base_diameter = int(self.diameter_finest / self.refinement_levels)
 
 class ObstacleParams:
     def __init__(self, context, resolution, reynolds, mach, physical_dims):
@@ -108,12 +109,14 @@ def main():
     obs.context = context
 
     runner = BenchmarkRunner()
+
+    disturbance = slice(5, 10)
     if "control" in args.benchmarks:
-        runner.benchmarks.append(ControlBenchmark(base_dir, sim, obs, rep))
+        runner.benchmarks.append(ControlBenchmark(base_dir, sim, obs, rep, disturbance))
     if "once_refined" in args.benchmarks:
-        runner.benchmarks.append(OnceRefinedBenchmark(base_dir, sim, obs, rep))
+        runner.benchmarks.append(OnceRefinedBenchmark(base_dir, sim, obs, rep, disturbance))
     if "multi_refined" in args.benchmarks:
-        runner.benchmarks.append(MultiRefinedBenchmark(base_dir, sim, obs, rep))
+        runner.benchmarks.append(MultiRefinedBenchmark(base_dir, sim, obs, rep, disturbance))
     shutil.copy(__file__, base_dir)
 
     if args.no_running:

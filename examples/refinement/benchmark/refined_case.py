@@ -14,15 +14,8 @@ class OnceRefinedBenchmark(BenchmarkCase):
 
     refinement_config: lt.RefinementConfig
 
-    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig'):
-        self.directories = dict()
-        self.simulation_params = sim_params
-        self.obstacle_params = obst_params
-        self.log = logging
-        self.set_directories(base_dir, "once_refined")
-        self.create_directories()
-        self.generate_simulation()
-        self.set_reporters()
+    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig', disturb_slice: slice):
+        super().__init__(base_dir, sim_params, obst_params, logging, disturb_slice, "once_refined")
 
     def run(self):
         shutil.copy(__file__, self.directories.get("case_dir"))
@@ -63,7 +56,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
 
         self.obstacle_params.resolution = res_lvl0
         flow_lvl0 = lt.Obstacle(*self.obstacle_params.get(), char_length_lu=self.simulation_params.diameter_finest / 2, boundary_index=1,
-                             disturb_slice=slice(5, 10))
+                             disturb_slice=self.disturbance_slice)
 
         self.obstacle_params.resolution = ref0.resolution
         self.obstacle_params.domain_len = physical_len_lvl1

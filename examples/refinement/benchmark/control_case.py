@@ -7,15 +7,8 @@ import lettuce as lt
 
 class ControlBenchmark(BenchmarkCase):
 
-    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig'):
-        self.directories = dict()
-        self.simulation_params = sim_params
-        self.obstacle_params = obst_params
-        self.log = logging
-        self.set_directories(base_dir, "control")
-        self.create_directories()
-        self.generate_simulation()
-        self.set_reporters()
+    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig', disturb_slice: slice):
+        super().__init__(base_dir, sim_params, obst_params, logging, disturb_slice, "control")
 
     def resolution(self):
         y = self.simulation_params.scaling * self.simulation_params.diameter_finest
@@ -25,7 +18,7 @@ class ControlBenchmark(BenchmarkCase):
     def generate_simulation(self):
         self.obstacle_params.resolution = self.resolution()
 
-        flow = lt.Obstacle(*self.obstacle_params.get(), char_length_lu=self.simulation_params.diameter_finest, disturb_slice=slice(10, 20))
+        flow = lt.Obstacle(*self.obstacle_params.get(), char_length_lu=self.simulation_params.diameter_finest, disturb_slice=self.disturbance_slice)
         midpoint = [self.obstacle_params.resolution[1] / 2] * 2
 
         flow.mask = self.generate_mask(*self.obstacle_params.resolution, midpoint)
