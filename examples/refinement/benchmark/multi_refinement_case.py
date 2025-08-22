@@ -31,9 +31,8 @@ class MultiRefinedBenchmark(BenchmarkCase):
         #create flows and simulations
         len_per_point_pu = self.refinement_config.pointlength_pu
         self.obstacle_params.resolution = res_lvl0
-        diameter = self.base_diameter
-        # TODO Disturb Slice darf nicht zu groß werden
-        flow_coarse = lt.Obstacle(*self.obstacle_params.get(), disturb_slice=slice(3, 6), char_length_lu=diameter, boundary_index=1)
+        diameter = self.simulation_params.base_diameter
+        flow_coarse = lt.Obstacle(*self.obstacle_params.get(), disturb_slice=self.disturbance_slice, char_length_lu=diameter, boundary_index=1)
         simulation_coarse = lt.Simulation(flow_coarse, self.generate_collision(flow_coarse), reporter=[])
         for i, ref in enumerate(refinements):
             len_per_point_pu /= 2
