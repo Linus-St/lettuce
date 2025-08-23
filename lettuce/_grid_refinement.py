@@ -167,9 +167,18 @@ class Refinement:
         # kehrwert von relaxation nehmen: omega = 1/tau
         relaxation_scaled = (2 * coarse_flow.units.relaxation_parameter_lu / fine_flow.units.relaxation_parameter_lu)
         f_neq = fine_flow.f_next - f_eq
+        f_neq = self.filter(f_neq)
         coarse_flow.f_next[:, *self.fine_to_coarse_slices] = (f_eq + relaxation_scaled * f_neq)[:,
                                      *(slice(2, -1, 2),) * coarse_flow.stencil.d]
         return
+
+    def filter(self, f_neq):
+        stencil = self.coarse_simulation.flow.stencil
+        f_neq = torch.stack([f_neq[i].roll(stencil.e[stencil.opposite[i]], [0, 1]) for i in range(stencil.q)])
+        # f_neq = torch.stack([f_neq[i].roll(stencil.e[i], [0, 1]) for i in range(stencil.q)])
+        f_neq = f_neq.sum(dim=0) / stencil.q
+        f_neq = f_neq.unsqueeze(0).expand(stencil.q, -1, -1)
+        return f_neq
 
     def run_fine_sim(self, time_interpolation: bool):
         self.fine_simulation(1)
