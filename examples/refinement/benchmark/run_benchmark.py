@@ -26,7 +26,7 @@ class SimulationParams:
         self.report_steps_coarse = report_steps_coarse
         self.refinement_levels = ref_levels
         self.space = space
-        self.base_diameter = int(self.diameter_finest / self.refinement_levels)
+        self.base_diameter = int(self.diameter_finest / 2**self.refinement_levels)
 
 class ObstacleParams:
     def __init__(self, context, resolution, reynolds, mach, physical_dims):
