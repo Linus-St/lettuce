@@ -6,40 +6,11 @@ import os
 import subprocess
 
 import lettuce as lt
-from examples.refinement.benchmark.benchmark_case import BenchmarkCase
+from examples.refinement.benchmark.benchmark_case import BenchmarkCase, LoggingConfig, ObstacleParams, SimulationParams
 from examples.refinement.benchmark.control_case import ControlBenchmark
 from examples.refinement.benchmark.multi_refinement_case import MultiRefinedBenchmark
 from examples.refinement.benchmark.refined_case import OnceRefinedBenchmark
 
-
-class LoggingConfig:
-    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, checkpoint: bool = True):
-        self.vtk = vtk
-        self.mlups = mlups
-        self.drag_lift = drag_lift
-        self.checkpoint = checkpoint
-
-class SimulationParams:
-    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, cont):
-        self.steps_coarse = steps_coarse
-        self.scaling = scaling
-        self.diameter_finest = diameter_finest
-        self.report_steps_coarse = report_steps_coarse
-        self.refinement_levels = ref_levels
-        self.space = space
-        self.continue_from_checkpoint = cont
-        self.base_diameter = int(self.diameter_finest / 2**self.refinement_levels)
-
-class ObstacleParams:
-    def __init__(self, context, resolution, reynolds, mach, physical_dims):
-        self.context = context
-        self.resolution = resolution
-        self.reynolds = reynolds
-        self.mach = mach
-        self.physical_dims = physical_dims
-
-    def get(self):
-        return [self.context, self.resolution, self.reynolds, self.mach, self.physical_dims[0]]
 
 class BenchmarkRunner:
 

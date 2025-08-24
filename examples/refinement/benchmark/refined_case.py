@@ -1,7 +1,7 @@
 import os.path
 import shutil
 
-from examples.refinement.benchmark.benchmark_case import BenchmarkCase
+from examples.refinement.benchmark.benchmark_case import BenchmarkCase, SimulationParams, LoggingConfig, ObstacleParams
 
 import lettuce as lt
 import numpy as np
@@ -14,7 +14,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
 
     refinement_config: lt.RefinementConfig
 
-    def __init__(self, base_dir: str, sim_params: 'SimulationParams', obst_params: 'ObstacleParams', logging: 'LoggingConfig', disturb_slice: slice):
+    def __init__(self, base_dir: str, sim_params: SimulationParams, obst_params: ObstacleParams, logging: LoggingConfig, disturb_slice: slice):
         super().__init__(base_dir, sim_params, obst_params, logging, disturb_slice, "once_refined")
 
     def run(self):
