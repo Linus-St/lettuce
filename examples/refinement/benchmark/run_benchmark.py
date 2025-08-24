@@ -13,19 +13,21 @@ from examples.refinement.benchmark.refined_case import OnceRefinedBenchmark
 
 
 class LoggingConfig:
-    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool):
+    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, checkpoint: bool = True):
         self.vtk = vtk
         self.mlups = mlups
         self.drag_lift = drag_lift
+        self.checkpoint = checkpoint
 
 class SimulationParams:
-    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space):
+    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, cont):
         self.steps_coarse = steps_coarse
         self.scaling = scaling
         self.diameter_finest = diameter_finest
         self.report_steps_coarse = report_steps_coarse
         self.refinement_levels = ref_levels
         self.space = space
+        self.continue_from_checkpoint = cont
         self.base_diameter = int(self.diameter_finest / 2**self.refinement_levels)
 
 class ObstacleParams:
@@ -70,6 +72,7 @@ def get_arguments():
     parser.add_argument("--benchmarks", nargs="*", choices=["control", "once_refined", "multi_refined"], default="control", help="List of benchmarks to run (default control)")
     parser.add_argument("--report_time", type=int, default=25, help="After how many steps on the coarsest level do we trigger reporting")
     parser.add_argument("--no_running", action="store_true", help="Do not run any simulation. Helpful for debugging purposes")
+    parser.add_argument("--cont", action="store_true", help="Continue running simulation from a checkpoint")
 
     physic = parser.add_argument_group("Physical Properties", "defines the physical properties of the simulation. Defaults see below")
     physic.add_argument("-r", "--reynolds", type=int, default=150, help="Reynolds number (default 150)")
@@ -80,15 +83,15 @@ def get_arguments():
     log.add_argument("-v", "--vtk", action="store_true", help="Use vtk reporter")
     log.add_argument("--mlups", action="store_true", help="Save MLups")
     log.add_argument("-f", "--force", action="store_true", help="Use Drag and Lift Reporter")
-
+    log.add_argument("--no_checkpoint", action="store_true", help="Use Drag and Lift Reporter")
 
     return parser.parse_args()
 
 def handle_arguments(args: argparse.Namespace):
     assert args.diameter % (2**args.refinement_levels) == 0
-    reporter_config = LoggingConfig(args.vtk, args.mlups, args.force)
+    reporter_config = LoggingConfig(args.vtk, args.mlups, args.force, checkpoint = not args.no_checkpoint)
     obstacle_params = ObstacleParams(None, None, args.reynolds, args.mach, args.dimensions)
-    simulation_params = SimulationParams(args.steps, args.report_time, args.scaling, args.diameter, args.refinement_levels, args.space)
+    simulation_params = SimulationParams(args.steps, args.report_time, args.scaling, args.diameter, args.refinement_levels, args.space, args.cont)
     return reporter_config, obstacle_params, simulation_params
 
 
@@ -98,12 +101,14 @@ def main():
 
     test_name = args.name
     base_dir = os.path.join(os.path.dirname(__file__), test_name)
-    os.makedirs(base_dir)
-
-    with open(os.path.join(base_dir, "args.txt"), "w") as f:
-        f.write(str(args))
-        f.write("\n")
-        f.write("Git Hash: " + subprocess.getoutput("git rev-parse HEAD"))
+    if args.cont:
+        shutil.move(os.path.join("data", os.path.basename(base_dir)), base_dir)
+    else:
+        os.makedirs(base_dir)
+        with open(os.path.join(base_dir, "args.txt"), "w") as f:
+            f.write(str(args))
+            f.write("\n")
+            f.write("Git Hash: " + subprocess.getoutput("git rev-parse HEAD"))
 
     context = lt.Context("cuda:0", use_native=False)
     obs.context = context

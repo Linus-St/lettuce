@@ -26,7 +26,8 @@ class BenchmarkCase(ABC):
         self.log = logging
         self.disturbance_slice = disturb_slice
         self.set_directories(base_dir, case_name)
-        self.create_directories()
+        if not sim_params.continue_from_checkpoint:
+            self.create_directories()
         self.generate_simulation()
         self.set_reporters()
 
@@ -67,6 +68,8 @@ class BenchmarkCase(ABC):
         self.directories["case_dir"] = os.path.join(base_dir, case_name)
         if self.log.vtk:
             self.directories["vtk"] = os.path.join(self.directories["case_dir"], "vtk")
+        if self.log.checkpoint > 0:
+            self.directories["checkpoint"] = os.path.join(self.directories["case_dir"], "checkpoint")
         return
 
     def create_directories(self):

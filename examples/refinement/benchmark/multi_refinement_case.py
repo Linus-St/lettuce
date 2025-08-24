@@ -2,6 +2,7 @@ import os
 import shutil
 
 import numpy as np
+import torch
 
 from examples.refinement.benchmark.benchmark_case import BenchmarkCase
 import lettuce as lt
@@ -52,13 +53,18 @@ class MultiRefinedBenchmark(BenchmarkCase):
         return most_coarse_simulation
 
     def run(self):
+        steps = self.simulation.units.convert_time_to_lu(self.simulation_params.steps_coarse)
+        if self.simulation_params.continue_from_checkpoint:
+            last_simulated_step = self.read_checkpoint()
+            steps -= last_simulated_step
         shutil.copy(__file__, self.directories.get("case_dir"))
         if self.log.vtk:
             self.refinement_config.refinement_levels[-1].fine_simulation.trigger_mask_output()
         start = timer()
-        self.simulation(int(self.simulation_params.steps_coarse))
+        self.simulation(int(steps))
         end = timer()
         if self.log.mlups:
+            # TODO das klappt nicht, wenn wir von einem Checkpoint anfangen, da brauchen wir dann probably die verstrichenen Steps seit Anfang
             mlups, per_level = calculate_mlups_total(self.refinement_config, self.simulation_params.steps_coarse, start,
                                                      end)
             mlups_net, net_per_level = calculate_mlups_net(self.refinement_config, self.simulation_params.steps_coarse,
@@ -66,7 +72,30 @@ class MultiRefinedBenchmark(BenchmarkCase):
             with open(os.path.join(self.directories.get("case_dir") + os.path.sep + "mlups.txt"), "w") as f:
                 print(f"Mlups_total: {mlups}, {per_level}\n"
                       f"Mlups_net: {mlups_net}, {net_per_level}", file=f)
+        #TODO Wenn diese Simulation selbst bereits von einem Checkpoint losging, dann erhalten wir evtl einen Fehler
+        # Das muss noch gehandelt werden
+        if self.log.checkpoint:
+            last_step = str(self.refinement_config.refinement_levels[0].coarse_simulation.flow.i)
+            for level, ref in enumerate(self.refinement_config.refinement_levels):
+                torch.save(ref.coarse_simulation.flow.f, os.path.join(self.directories["checkpoint"], f"{level}.pt"))
+            flow = self.refinement_config.refinement_levels[-1].fine_simulation.flow
+            torch.save(flow.f, os.path.join(self.directories["checkpoint"], f"{self.refinement_config.refinement_level}.pt"))
+            with open(os.path.join(self.directories.get("checkpoint"), last_step), "w") as f:
+                print(last_step, file=f)
         return
+
+    def read_checkpoint(self):
+        checkpoint_dir = os.listdir(self.directories.get("checkpoint"))
+        last_step = int(list((filter(lambda string: not string.endswith(".pt"), checkpoint_dir)))[0])
+        for level, ref in enumerate(self.refinement_config.refinement_levels):
+            flow = ref.coarse_simulation.flow
+            flow.f = torch.load(os.path.join(self.directories.get("checkpoint"), f"{level}.pt"))
+            flow.i = last_step * 2**level
+        ref_level = self.refinement_config.refinement_level
+        flow = self.refinement_config.refinement_levels[-1].fine_simulation.flow
+        flow.f = torch.load(os.path.join(self.directories.get("checkpoint"), f"{ref_level}.pt"))
+        flow.i = last_step * 2**ref_level
+        return last_step
 
     def set_mask(self, flow: lt.Obstacle):
         midpoint = np.array([self.refinement_config.resolution_lvl0[1] // 2]*2)
