@@ -86,7 +86,7 @@ def main():
 
     runner = BenchmarkRunner()
 
-    disturbance = slice(5, 10)
+    disturbance = slice(2, 7)
     if "control" in args.benchmarks:
         runner.benchmarks.append(ControlBenchmark(base_dir, sim, obs, rep, disturbance))
     if "once_refined" in args.benchmarks:

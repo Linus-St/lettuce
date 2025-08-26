@@ -8,7 +8,7 @@ from examples.refinement.benchmark.benchmark_case import BenchmarkCase, Simulati
 import lettuce as lt
 from timeit import default_timer as timer
 
-from lettuce import calculate_mlups_total, calculate_mlups_net
+from lettuce import calculate_mlups_total, calculate_mlups_net, Refinement
 
 
 class MultiRefinedBenchmark(BenchmarkCase):
@@ -25,9 +25,11 @@ class MultiRefinedBenchmark(BenchmarkCase):
 
         # creating refinements
         start, end = self.refinement_borders()
-        refinements = []
+        refinements: list[Refinement] = []
         for i in range(len(start)):
             refinements.append(self.refinement_config.add_refinement_by_index(start[i], end[i]))
+
+        assert refinements[0].minimum_point_lvl0[0] >= self.disturbance_slice.stop
 
         #create flows and simulations
         len_per_point_pu = self.refinement_config.pointlength_pu
