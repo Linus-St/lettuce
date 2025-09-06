@@ -35,8 +35,9 @@ class RefinementConfig:
     refinement_levels: list['Refinement']
     dimensions_lvl0_pu: np.array
     resolution_lvl0: np.array
+    do_filter: bool
 
-    def __init__(self, physical_dimensions: list[int], resolution: list[int]):
+    def __init__(self, physical_dimensions: list[int], resolution: list[int], do_filter: False):
         self.refinement_levels = []
         self.dimensions_lvl0_pu = np.array(physical_dimensions)
         self.resolution_lvl0 = np.array(resolution)
@@ -67,7 +68,7 @@ class RefinementConfig:
         for refinement in self.refinement_levels:
             minimum_coarse = refinement.transform.coarse_to_fine(minimum_coarse)
             maximum_coarse = refinement.transform.coarse_to_fine(maximum_coarse)
-        self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, start_point, end_point))
+        self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, start_point, end_point, do_filter=self.do_filter))
         return self.refinement_levels[-1]
 
     def add_refinement_relative(self, start_relative: np.array, end_relative: np.array):
@@ -78,7 +79,7 @@ class RefinementConfig:
             for refinement in self.refinement_levels:
                 minimum_coarse = refinement.transform.coarse_to_fine(minimum_coarse)
                 maximum_coarse = refinement.transform.coarse_to_fine(maximum_coarse)
-        self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, minimum_coarse_lvl0, maximum_coarse_lvl0))
+        self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, minimum_coarse_lvl0, maximum_coarse_lvl0, do_filter=self.do_filter))
         return self.refinement_levels[-1]
 
     def add_vtk_reporters(self, folder_name: str, interval: int):
@@ -121,6 +122,7 @@ class Refinement:
     coarse_min: tuple[int, ...]
     coarse_max: tuple[int, ...]
     coarse_border_slices: tuple[slice, ...]
+    fine_to_coarse_slices: tuple[slice, ...]
     border_length_coarse: tuple[int, ...]
     resolution: tuple[int, ...]
     minimum_point_lvl0: tuple[int, ...]
@@ -128,8 +130,9 @@ class Refinement:
     transform: Transformation
     coarse_simulation: 'Simulation'
     fine_simulation: 'Simulation'
+    do_filter: bool
 
-    def __init__(self, minimum_coarse: list[int], maximum_coarse: list[int], minimum_lvl0: tuple[int, ...]=None, maximum_lvl0: tuple[int, ...]=None):
+    def __init__(self, minimum_coarse: list[int], maximum_coarse: list[int], minimum_lvl0: tuple[int, ...]=None, maximum_lvl0: tuple[int, ...]=None, do_filter: bool=False):
         self.coarse_borders = tuple(map(lambda a, b: tuple((a, b)), minimum_coarse, maximum_coarse))
         self.coarse_border_slices = tuple(map(lambda a, b: slice(a, b+1), minimum_coarse, maximum_coarse))
         self.fine_to_coarse_slices = tuple(map(lambda a, b: slice(a+1, b), minimum_coarse, maximum_coarse))
@@ -167,17 +170,17 @@ class Refinement:
         # kehrwert von relaxation nehmen: omega = 1/tau
         relaxation_scaled = (2 * coarse_flow.units.relaxation_parameter_lu / fine_flow.units.relaxation_parameter_lu)
         f_neq = fine_flow.f_next - f_eq
-        f_neq = self.filter(f_neq)
+        if self.do_filter:
+            f_neq = self.filter(f_neq)
         coarse_flow.f_next[:, *self.fine_to_coarse_slices] = (f_eq + relaxation_scaled * f_neq)[:,
-                                     *(slice(2, -1, 2),) * coarse_flow.stencil.d]
+                                     *(slice(2, -2, 2),) * coarse_flow.stencil.d]
         return
 
     def filter(self, f_neq):
-        return f_neq
         stencil = self.coarse_simulation.flow.stencil
         # roll each velocity Matrix in the opposite direction of the vector it represents
-        # f_neq = torch.stack([f_neq[i].roll(stencil.e[stencil.opposite[i]], [0, 1]) for i in range(stencil.q)])
-        f_neq = torch.stack([f_neq[i].roll(stencil.e[i], [0, 1]) for i in range(stencil.q)])
+        f_neq = torch.stack([f_neq[i].roll(stencil.e[stencil.opposite[i]], [0, 1]) for i in range(stencil.q)])
+        # f_neq = torch.stack([f_neq[i].roll(stencil.e[i], [0, 1]) for i in range(stencil.q)])
         f_neq = f_neq.sum(dim=0) / stencil.q
         f_neq = f_neq.unsqueeze(0).expand(stencil.q, -1, -1)
         return f_neq

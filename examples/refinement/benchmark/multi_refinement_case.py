@@ -21,7 +21,7 @@ class MultiRefinedBenchmark(BenchmarkCase):
     def generate_simulation(self):
         assert(self.simulation_params.refinement_levels > 0)
         res_lvl0 = self.base_resolution()
-        self.refinement_config = lt.RefinementConfig(self.obstacle_params.physical_dims, res_lvl0)
+        self.refinement_config = lt.RefinementConfig(self.obstacle_params.physical_dims, res_lvl0, do_filter=self.simulation_params.do_filter)
 
         # creating refinements
         start, end = self.refinement_borders()

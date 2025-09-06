@@ -13,7 +13,7 @@ class LoggingConfig:
         self.checkpoint = checkpoint
 
 class SimulationParams:
-    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, cont):
+    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, cont, filter):
         self.steps_coarse = steps_coarse
         self.scaling = scaling
         self.diameter_finest = diameter_finest
@@ -22,6 +22,7 @@ class SimulationParams:
         self.space = space
         self.continue_from_checkpoint = cont
         self.base_diameter = int(self.diameter_finest / 2**self.refinement_levels)
+        self.do_filter = filter
 
 class ObstacleParams:
     def __init__(self, context, resolution, reynolds, mach, physical_dims):

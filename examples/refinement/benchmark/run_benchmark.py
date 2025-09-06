@@ -44,6 +44,7 @@ def get_arguments():
     parser.add_argument("--report_time", type=int, default=25, help="After how many steps on the coarsest level do we trigger reporting")
     parser.add_argument("--no_running", action="store_true", help="Do not run any simulation. Helpful for debugging purposes")
     parser.add_argument("--cont", action="store_true", help="Continue running simulation from a checkpoint")
+    parser.add_argument("--filter", action="store_true", help="If the filtering on border should be active")
 
     physic = parser.add_argument_group("Physical Properties", "defines the physical properties of the simulation. Defaults see below")
     physic.add_argument("-r", "--reynolds", type=int, default=150, help="Reynolds number (default 150)")
@@ -62,7 +63,7 @@ def handle_arguments(args: argparse.Namespace):
     assert args.diameter % (2**args.refinement_levels) == 0
     reporter_config = LoggingConfig(args.vtk, args.mlups, args.force, checkpoint = not args.no_checkpoint)
     obstacle_params = ObstacleParams(None, None, args.reynolds, args.mach, args.dimensions)
-    simulation_params = SimulationParams(args.steps, args.report_time, args.scaling, args.diameter, args.refinement_levels, args.space, args.cont)
+    simulation_params = SimulationParams(args.steps, args.report_time, args.scaling, args.diameter, args.refinement_levels, args.space, args.cont, args.filter)
     return reporter_config, obstacle_params, simulation_params
 
 

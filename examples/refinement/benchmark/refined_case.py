@@ -49,7 +49,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
 
     def generate_simulation(self):
         res_lvl0 = self.resolution()
-        config = lt.RefinementConfig(self.obstacle_params.physical_dims, res_lvl0)
+        config = lt.RefinementConfig(self.obstacle_params.physical_dims, res_lvl0, self.simulation_params.do_filter)
 
         ref0 = config.add_refinement_relative(np.array([1 / 18, 1 / 9]), np.array([15 / 18, 8 / 9]))
         physical_len_lvl1 = ref0.resolution[0] * (self.obstacle_params.physical_dims[0] / res_lvl0[0]) / 2
