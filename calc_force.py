@@ -5,6 +5,7 @@ import numpy
 import pandas as pd
 import numpy as np
 import scipy.signal as s
+import matplotlib.pyplot as plt
 
 directory = ""
 
@@ -22,11 +23,16 @@ def calc_lift(data):
     v = -data[valleys]
     return numpy.average(np.append(data[peaks], -data[valleys]))
 
-def calculate(file, t):
+def get_values(file):
     df = import_csv(file)
     time = df["time"].to_numpy()
     drag = df["drag"].to_numpy()
     lift = df["lift"].to_numpy()
+    return time, drag, lift
+
+
+def calculate(file, t):
+    time, drag, lift = get_values(file)
 
     indices = np.where(time > t)
 
@@ -38,14 +44,13 @@ def calculate(file, t):
     return drag, lift
 
 def read_directory(name):
-    return os.listdir(name)
+    return sorted(os.listdir(name))
 
 def calculate_percentage_diff(control, actual):
     return abs(actual - control) * 100 / control
 
-def main():
-    time = 65
-    tests = sorted(read_directory(directory))
+def read_drag_lift_from_dir(time, dir):
+    tests = read_directory(dir)
 
     drag_values = dict()
     lift_values = dict()
@@ -68,6 +73,27 @@ def main():
 
     drag_values["control"] = drag_control
     lift_values["control"] = lift_control
+    return
+
+def print_graphs(test_dirs, do_drag, do_lift):
+    for test in test_dirs:
+        time, drag, lift = get_values(os.path.join(directory, test, "multi_refined", "drag_lift.csv"))
+        if do_drag:
+            plt.plot(time, drag)
+            plt.axis(ymin=0, ymax=5)
+            plt.title(test)
+            plt.show()
+        if do_lift:
+            plt.plot(time, drag)
+            plt.axis(ymin=-5, ymax=5)
+            plt.title(test)
+            plt.show()
+    return
+
+
+def main():
+    tests = read_directory(directory)
+    print_graphs(tests, True, True)
     return
 
 if __name__ == '__main__':
