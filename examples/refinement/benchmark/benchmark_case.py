@@ -36,7 +36,7 @@ class ObstacleParams:
         return [self.context, self.resolution, self.reynolds, self.mach, self.physical_dims[0]]
 
 def generate_collision(flow: lt.Obstacle):
-    return lt.KBCCollision(flow.units.relaxation_parameter_lu)
+    return lt.BGKCollision(flow.units.relaxation_parameter_lu)
 
 class BenchmarkCase(ABC):
 
