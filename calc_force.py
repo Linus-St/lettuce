@@ -80,12 +80,12 @@ def print_graphs(test_dirs, do_drag, do_lift):
         time, drag, lift = get_values(os.path.join(directory, test, "multi_refined", "drag_lift.csv"))
         if do_drag:
             plt.plot(time, drag)
-            plt.axis(ymin=0, ymax=5)
+            plt.axis(ymin=0.5, ymax=1.5)
             plt.title(test)
             plt.show()
         if do_lift:
-            plt.plot(time, drag)
-            plt.axis(ymin=-5, ymax=5)
+            plt.plot(time, lift)
+            plt.axis(ymin=-1, ymax=1)
             plt.title(test)
             plt.show()
     return
