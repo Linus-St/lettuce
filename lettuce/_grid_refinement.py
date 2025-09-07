@@ -41,6 +41,7 @@ class RefinementConfig:
         self.refinement_levels = []
         self.dimensions_lvl0_pu = np.array(physical_dimensions)
         self.resolution_lvl0 = np.array(resolution)
+        self.do_filter = do_filter
 
     @property
     def refinement_level(self):
@@ -143,6 +144,7 @@ class Refinement:
         self.transform = Transformation(np.array(minimum_coarse), np.array(maximum_coarse))
         self.minimum_point_lvl0 = minimum_lvl0
         self.maximum_point_lvl0 = maximum_lvl0
+        self.do_filter = do_filter
 
     def coarse_to_fine(self, coarse_grid, fine_grid):
 
