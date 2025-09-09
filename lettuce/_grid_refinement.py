@@ -146,23 +146,6 @@ class Refinement:
         self.maximum_point_lvl0 = maximum_lvl0
         self.do_filter = do_filter
 
-    def coarse_to_fine(self, coarse_grid, fine_grid):
-
-        # TODO schöner schreiben
-        match len(self.coarse_borders):
-            case 1:
-                fine_grid[:, (0, -1)] = coarse_grid[:, (self.coarse_borders[0], self.coarse_borders[0])]
-            case 2:
-                fine_grid[:, (0, -1), ::2] = coarse_grid[:, (self.coarse_borders[0][0], self.coarse_borders[0][1]), self.coarse_border_slices[1]]
-                fine_grid[:, ::2, (0, -1)] = coarse_grid[:, self.coarse_border_slices[0], (self.coarse_borders[1][0], self.coarse_borders[1][1])]
-            case 3:
-                fine_grid[:, (0, -1), ::2, ::2] = coarse_grid[:, (self.coarse_borders[0], self.coarse_borders[0]), self.coarse_border_slices[1], self.coarse_border_slices[2]]
-                fine_grid[:, ::2, (0, -1), ::2] = coarse_grid[:, self.coarse_border_slices[0], (self.coarse_borders[1][0], self.coarse_borders[1][1]), self.coarse_border_slices[2]]
-                fine_grid[:, ::2, ::2, (0, -1)] = coarse_grid[:, self.coarse_border_slices[0], self.coarse_border_slices[1], (self.coarse_borders[2][0], self.coarse_borders[2][1])]
-            case _:
-                print("Impossible state reached in space_interpolation coarse to fine")
-        return
-
     def fine_to_coarse(self):
         fine_flow = self.fine_simulation.flow
         coarse_flow = self.coarse_simulation.flow
@@ -189,21 +172,39 @@ class Refinement:
 
     def run_fine_sim(self, time_interpolation: bool):
         self.fine_simulation(1)
-        # propagate coarse values to fine grid on the border
+
         if time_interpolation:
-            coarse_grid = torch.lerp(self.coarse_simulation.flow.f, self.coarse_simulation.flow.f_next, 0.5)
+            f_coarse = torch.lerp(self.coarse_simulation.flow.f, self.coarse_simulation.flow.f_next, 0.5)
         else:
-            coarse_grid = self.coarse_simulation.flow.f_next
+            f_coarse = self.coarse_simulation.flow.f_next
 
-        coarse_feq = get_equilibrium(self.coarse_simulation.flow, coarse_grid)
-        coarse_fneq = coarse_grid - coarse_feq
+        #_______________________________________________________________
+
+        flow_coarse = self.coarse_simulation.flow
+        flow_fine = self.fine_simulation.flow
+
+        rho = flow_coarse.rho(f = f_coarse)
+        u = flow_coarse.u(f = f_coarse, rho = rho)
+
+        rho = rho[:, *self.coarse_border_slices].repeat_interleave(2, dim=1).repeat_interleave(2, dim=2)[:, :-1, :-1]
+        u = u[:, *self.coarse_border_slices].repeat_interleave(2, dim=1).repeat_interleave(2, dim=2)[:, :-1, :-1]
+        self.interpolate_borders(rho)
+        self.interpolate_borders(u)
+
+        f_eq = flow_coarse.equilibrium(flow = flow_coarse, rho = rho, u = u)
+        f_neq = flow_coarse.context.zero_tensor(f_eq.size())
+        f_neq[:, ::2, ::2] = f_coarse[:, *self.coarse_border_slices] - f_eq[:, ::2, ::2]
+        self.interpolate_borders(f_neq)
+
         relaxation_scaled = (self.fine_simulation.flow.units.relaxation_parameter_lu / (2*self.coarse_simulation.flow.units.relaxation_parameter_lu))
-        coarse_grid = coarse_feq + relaxation_scaled * coarse_fneq
+        corrected_border_values = f_eq + relaxation_scaled * f_neq
 
-        self.coarse_to_fine(coarse_grid, self.fine_simulation.flow.f_next)
-        # trigger interpolation for fine populations without coarse equivalent
-        if not len(self.coarse_borders) == 1:
-            self.fine_simulation.flow.interpolate_borders()
+        outer_mask = flow_fine.context.zero_tensor(flow_fine.f.size(), dtype=torch.bool)
+        outer_mask[:, 0, :] = outer_mask[:, :, 0] = outer_mask[:, -1, :] = outer_mask[:, :, -1] = True
+
+        # replace f on outer border with corrected values
+        flow_fine.f_next = torch.where(outer_mask, corrected_border_values, flow_fine.f_next)
+
         # set f = f_next
         self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
 
@@ -223,3 +224,60 @@ class Refinement:
         result += 'refinement start on level 0: ' + str(self.minimum_point_lvl0) + '\n'
         result += 'refinement end on level 0: ' + str(self.maximum_point_lvl0)
         return result
+
+    def interpolate_on_border(self, coarse_values: torch.Tensor):
+        a = coarse_values[:, :-3]
+        b = coarse_values[:, 1:-2]
+        c = coarse_values[:, 2:-1]
+        d = coarse_values[:, 3:]
+        e = coarse_values[:, (0, -1)]
+        f = coarse_values[:, (1, -2)]
+        g = coarse_values[:, (2, -3)]
+        interpolated_values = self.coarse_simulation.context.convert_to_tensor(
+            torch.zeros(coarse_values.size(dim=0), coarse_values.size(dim=1) - 1))
+        interpolated_values[:, (0, -1)] = interpolate_3(e, f, g)
+        interpolated_values[:, 1:-1] = interpolate_4(a, b, c, d)
+
+        return interpolated_values
+
+    # input: tensor with shape of fine grid and coarse values on overlap
+    # interpolates the values between overlap
+    def interpolate_borders(self, tensor, dimension=2):
+        """
+        if this flow is 'fine' in terms of grid refinement, on the border we need to interpolate every position,
+        that does not have a counterpart on the coarse grid.
+        """
+        assert (dimension == 2, "Fehler, Border Interpolation funktioniert nur in 2 D")
+        if dimension == 2:
+            # left side
+            tensor[:, 0, 1::2] = self.interpolate_on_border(tensor[:, 0, ::2])
+            # right side
+            tensor[:, -1, 1::2] = self.interpolate_on_border(tensor[:, -1, ::2])
+            # top side
+            tensor[:, 1::2, 0] = self.interpolate_on_border(tensor[:, ::2, 0])
+            # bottom side
+            tensor[:, 1::2, -1] = self.interpolate_on_border(tensor[:, ::2, -1])
+        # TODO
+        # if self.stencil.d == 3:
+        #     # left side
+        #     self.f_next[:, 0, 1::2, 1::2] = self.interpolate_on_border(self.f_next[:, 0, ::2, ::2])
+        #     # right side
+        #     self.f_next[:, -1, 1::2, 1::2] = self.interpolate_on_border(self.f_next[:, -1, ::2, ::2])
+        #     # top side
+        #     self.f_next[:, 1::2, 0, 1::2] = self.interpolate_on_border(self.f_next[:, ::2, 0, ::2])
+        #     # bottom side
+        #     self.f_next[:, 1::2, -1, 1::2] = self.interpolate_on_border(self.f_next[:, ::2, -1, ::2])
+        #     # front side
+        #     self.f_next[:, 1::2, 1::2, 0] = self.interpolate_on_border(self.f_next[:, ::2, ::2, 0])
+        #     # back side
+        #     self.f_next[:, 1::2, 1::2, -1] = self.interpolate_on_border(self.f_next[:, ::2, ::2, 0])
+
+        return
+
+# interpolate position between b and c
+def interpolate_4(a, b, c, d):
+    return (9 / 16) * (b + c) - (1 / 16) * (a + d)
+
+# interpolate position between a and b
+def interpolate_3(a, b, c):
+    return (3 / 8) * a + (3 / 4) * b - (1 / 8) * c
