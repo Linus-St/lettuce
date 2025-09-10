@@ -53,10 +53,6 @@ class MultiRefinedBenchmark(BenchmarkCase):
         most_coarse_simulation = refinements[0].coarse_simulation
         self.simulation = most_coarse_simulation
 
-        # if 0 -> do framerate export -> calculate report step to be every 1/24 sekonds
-        if self.simulation_params.report_steps_coarse == 0:
-            self.simulation_params.report_steps_coarse = int(self.simulation.flow.units.convert_time_to_lu(1/24))
-
         return most_coarse_simulation
 
     def run(self):
