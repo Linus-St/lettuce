@@ -42,7 +42,7 @@ class ControlBenchmark(BenchmarkCase):
         if self.log.vtk:
             self.simulation.trigger_mask_output()
 
-        mlups = self.simulation(self.simulation_params.steps_coarse * 2)
+        mlups = self.simulation(int(self.simulation.flow.units.convert_time_to_lu(self.simulation_params.steps_coarse)))
 
         if self.log.mlups:
             with open(os.path.join(self.directories.get("case_dir") + os.path.sep + "mlups.txt"), "w") as f:
