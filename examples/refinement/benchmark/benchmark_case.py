@@ -61,8 +61,10 @@ class BenchmarkCase(ABC):
         # if 0 -> do framerate export -> calculate report step to be every 1/24 sekonds
         if self.simulation_params.report_steps_coarse == 0:
             self.simulation_params.report_steps_coarse = int(self.simulation.flow.units.convert_time_to_lu(1/24))
-        self.set_reporters()
-
+            self.set_reporters()
+            self.simulation_params.report_steps_coarse = 0
+        else:
+            self.set_reporters()
     @abstractmethod
     def run(self):
         pass

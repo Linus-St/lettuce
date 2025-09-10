@@ -28,10 +28,10 @@ class ControlBenchmark(BenchmarkCase):
 
     def set_reporters(self):
         if self.log.drag_lift:
-            d_l_reporter = self.generate_drag_lift_rep(self.simulation_params.report_steps_coarse * 2**self.simulation_params.refinement_levels)
+            d_l_reporter = self.generate_drag_lift_rep(self.simulation_params.report_steps_coarse)
             self.simulation.reporter += [d_l_reporter]
         if self.log.vtk:
-            vtk_reporter = self.generate_vtk_rep(self.simulation_params.report_steps_coarse * 2**self.simulation_params.refinement_levels)
+            vtk_reporter = self.generate_vtk_rep(self.simulation_params.report_steps_coarse)
             self.simulation.reporter += [vtk_reporter]
 
         self.simulation.reporter += [self.generate_energyrep()]
