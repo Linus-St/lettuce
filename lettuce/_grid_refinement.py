@@ -150,11 +150,11 @@ class Refinement:
         fine_flow = self.fine_simulation.flow
         coarse_flow = self.coarse_simulation.flow
 
-        f_eq = get_equilibrium(fine_flow, fine_flow.f_next)
+        f_eq = get_equilibrium(fine_flow, fine_flow.f)
 
         # kehrwert von relaxation nehmen: omega = 1/tau
         relaxation_scaled = (2 * coarse_flow.units.relaxation_parameter_lu / fine_flow.units.relaxation_parameter_lu)
-        f_neq = fine_flow.f_next - f_eq
+        f_neq = fine_flow.f - f_eq
         if self.do_filter:
             f_neq = self.filter(f_neq)
         coarse_flow.f_next[:, *self.fine_to_coarse_slices] = (f_eq + relaxation_scaled * f_neq)[:,
