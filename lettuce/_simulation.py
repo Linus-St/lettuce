@@ -210,6 +210,11 @@ class Simulation:
             self.report()
 
         for _ in range(num_steps):
+            # if self.flow.i == 0 and self.flow.ref_level == 0:
+                # torch.cuda.reset_max_memory_allocated(self.context.device)
+                # mem = torch.cuda.max_memory_allocated(self.context.device)
+                # torch.cuda.reset_max_memory_allocated(self.context.device)
+                # print("before simulation, after setup: ", mem)
             self._collide_and_stream(self)
             if self.refinement is not None:
                 self.refinement()
