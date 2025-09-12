@@ -18,7 +18,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
         super().__init__(base_dir, sim_params, obst_params, logging, disturb_slice)
 
     def run(self):
-        shutil.copy(__file__, self.directories.get("case_dir"))
+        shutil.copy(__file__, self.directories.get("base_dir"))
         if self.log.vtk:
             self.refinement_config.refinement_levels[-1].fine_simulation.trigger_mask_output()
         start = timer()
@@ -27,7 +27,7 @@ class OnceRefinedBenchmark(BenchmarkCase):
         if self.log.mlups:
             mlups, per_level = calculate_mlups_total(self.refinement_config, self.simulation_params.steps_coarse, start, end)
             mlups_net, net_per_level = calculate_mlups_net(self.refinement_config, self.simulation_params.steps_coarse, start, end)
-            with open(os.path.join(self.directories.get("case_dir") + os.path.sep + "mlups.txt"), "w") as f:
+            with open(os.path.join(self.directories.get("base_dir") + os.path.sep + "mlups.txt"), "w") as f:
                 print(f"Mlups_total: {mlups}, {per_level}\n"
                       f"Mlups_net: {mlups_net}, {net_per_level}", file=f)
         return

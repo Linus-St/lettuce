@@ -38,13 +38,13 @@ class ControlBenchmark(BenchmarkCase):
         pass
 
     def run(self):
-        shutil.copy(__file__, self.directories.get("case_dir"))
+        shutil.copy(__file__, self.directories.get("base_dir"))
         if self.log.vtk:
             self.simulation.trigger_mask_output()
 
         mlups = self.simulation(int(self.simulation.flow.units.convert_time_to_lu(self.simulation_params.steps_coarse)))
 
         if self.log.mlups:
-            with open(os.path.join(self.directories.get("case_dir") + os.path.sep + "mlups.txt"), "w") as f:
+            with open(os.path.join(self.directories.get("base_dir") + os.path.sep + "mlups.txt"), "w") as f:
                 print(f"Mlups: {mlups}", file=f)
         return
