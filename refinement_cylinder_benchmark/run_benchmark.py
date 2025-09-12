@@ -44,6 +44,7 @@ def get_arguments():
     parser.add_argument("--filter", action="store_true", help="If the filtering on border should be active")
     parser.add_argument("--framerate_export", action="store_true", help="Set export to 24 fps")
     parser.add_argument("--output_dir", default="data", help="parent directory in which to put directory for results")
+    parser.add_argument("--cuda-native", action="store_true", help="use cuda native instead of internal torch implementation")
 
     physic = parser.add_argument_group("Physical Properties", "defines the physical properties of the simulation. Defaults see below")
     physic.add_argument("-r", "--reynolds", type=int, default=150, help="Reynolds number (default 150)")
@@ -79,7 +80,7 @@ def main():
             f.write("\n")
             f.write("Git Hash: " + subprocess.getoutput("git rev-parse HEAD"))
 
-    context = lt.Context("cuda:0", use_native=False)
+    context = lt.Context("cuda:0", use_native=args.cuda_native)
     obs.context = context
 
     runner = BenchmarkRunner()
