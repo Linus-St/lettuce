@@ -48,13 +48,13 @@ class BenchmarkCase(ABC):
     obstacle_params: ObstacleParams
 
     @abstractmethod
-    def __init__(self, base_dir: str, sim_params: SimulationParams, obst_params: ObstacleParams, logging: LoggingConfig, disturb_slice: slice, case_name: str):
+    def __init__(self, base_dir: str, sim_params: SimulationParams, obst_params: ObstacleParams, logging: LoggingConfig, disturb_slice: slice):
         self.directories = dict()
         self.simulation_params = sim_params
         self.obstacle_params = obst_params
         self.log = logging
         self.disturbance_slice = disturb_slice
-        self.set_directories(base_dir, case_name)
+        self.set_directories(base_dir)
         if not sim_params.continue_from_checkpoint:
             self.create_directories()
         self.generate_simulation()
@@ -98,12 +98,11 @@ class BenchmarkCase(ABC):
     def generate_vtk_rep(self, reporting_steps):
         return lt.VTKReporter(interval=reporting_steps, filename_base=self.directories.get("vtk") + os.path.sep + "control", flow_grid=self.simulation.flow.grid)
 
-    def set_directories(self, base_dir: str, case_name: str):
-        self.directories["case_dir"] = os.path.join(base_dir, case_name)
+    def set_directories(self, base_dir: str):
         if self.log.vtk:
-            self.directories["vtk"] = os.path.join(self.directories["case_dir"], "vtk")
+            self.directories["vtk"] = os.path.join(base_dir, "vtk")
         if self.log.checkpoint > 0:
-            self.directories["checkpoint"] = os.path.join(self.directories["case_dir"], "checkpoint")
+            self.directories["checkpoint"] = os.path.join(base_dir, "checkpoints")
         return
 
     def create_directories(self):

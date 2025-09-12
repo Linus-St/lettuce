@@ -16,7 +16,7 @@ class MultiRefinedBenchmark(BenchmarkCase):
     refinement_config: 'RefinementConfig'
 
     def __init__(self, base_dir: str, sim_params: SimulationParams, obst_params: ObstacleParams, logging: LoggingConfig, disturb_slice: slice):
-        super().__init__(base_dir, sim_params, obst_params, logging, disturb_slice, "multi_refined")
+        super().__init__(base_dir, sim_params, obst_params, logging, disturb_slice)
 
     def generate_simulation(self):
         assert(self.simulation_params.refinement_levels > 0)
@@ -61,7 +61,6 @@ class MultiRefinedBenchmark(BenchmarkCase):
         if self.simulation_params.continue_from_checkpoint:
             last_simulated_step = self.read_checkpoint()
             steps -= last_simulated_step
-        shutil.copy(__file__, self.directories.get("case_dir"))
         if self.log.vtk:
             self.refinement_config.refinement_levels[-1].fine_simulation.trigger_mask_output()
         start = timer()

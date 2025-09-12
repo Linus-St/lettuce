@@ -43,6 +43,7 @@ def get_arguments():
     parser.add_argument("--cont", action="store_true", help="Continue running simulation from a checkpoint")
     parser.add_argument("--filter", action="store_true", help="If the filtering on border should be active")
     parser.add_argument("--framerate_export", action="store_true", help="Set export to 24 fps")
+    parser.add_argument("--output_dir", default="data", help="parent directory in which to put directory for results")
 
     physic = parser.add_argument_group("Physical Properties", "defines the physical properties of the simulation. Defaults see below")
     physic.add_argument("-r", "--reynolds", type=int, default=150, help="Reynolds number (default 150)")
@@ -70,11 +71,8 @@ def main():
     args = get_arguments()
     rep, obs, sim = handle_arguments(args)
 
-    test_name = args.name
-    base_dir = os.path.join(os.path.dirname(__file__), test_name)
-    if args.cont:
-        shutil.move(os.path.join("data", os.path.basename(base_dir)), base_dir)
-    else:
+    base_dir = os.path.join(args.output_dir, args.name)
+    if not args.cont:
         os.makedirs(base_dir)
         with open(os.path.join(base_dir, "args.txt"), "w") as f:
             f.write(str(args))
@@ -98,7 +96,6 @@ def main():
     if args.no_running:
         return
     runner.run()
-    shutil.move(base_dir, os.path.join("data", os.path.basename(base_dir)))
     return
 
 if __name__ == "__main__":
