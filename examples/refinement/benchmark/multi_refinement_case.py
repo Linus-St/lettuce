@@ -51,6 +51,7 @@ class MultiRefinedBenchmark(BenchmarkCase):
             simulation_coarse = simulation_fine
 
         most_coarse_simulation = refinements[0].coarse_simulation
+        most_coarse_simulation.refinement_config = self.refinement_config
         self.simulation = most_coarse_simulation
 
         return most_coarse_simulation

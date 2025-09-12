@@ -107,6 +107,12 @@ class RefinementConfig:
             print(str(self), file=f)
             print(f'Additional information: \n{extra_info}', file=f)
 
+    def trigger_reporting(self):
+        self.refinement_levels[0].coarse_simulation.report()
+        for refinement in self.refinement_levels:
+            refinement.fine_simulation.report()
+        return
+
 
 
 class Refinement:
@@ -216,8 +222,6 @@ class Refinement:
 
         # set f = f_next
         self.fine_simulation.flow.f = self.fine_simulation.flow.f_next
-
-        self.fine_simulation.trigger_reporter()
         return
 
     def set_simulations(self, coarse, fine):

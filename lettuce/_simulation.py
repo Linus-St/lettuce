@@ -47,9 +47,10 @@ class Simulation:
     no_streaming_mask: Optional[torch.Tensor]
     reporter: List['Reporter']
     refinement: Optional['Refinement']
+    refinement_config: Optional['RefinementConfig']
 
     def __init__(self, flow: 'Flow', collision: 'Collision',
-                 reporter: List['Reporter'], refinement: 'Refinement' = None):
+                 reporter: List['Reporter'], refinement: 'Refinement' = None, refinement_config: 'RefinementConfig' = None):
         self.flow = flow
         self.flow.collision = collision
         self.context = flow.context
@@ -58,6 +59,7 @@ class Simulation:
         self.boundaries = ([None]
                            + sorted(flow.boundaries, key=lambda b: str(b)))
         self.refinement = refinement
+        self.refinement_config = refinement_config
 
         # ==================================== #
         # initialise masks based on boundaries #
@@ -191,13 +193,9 @@ class Simulation:
                             boundary(self.flow), self.flow.f_next, out=self.flow.f_next)
         return self.flow.f_next
 
-    def _report(self):
+    def report(self):
         for reporter in self.reporter:
             reporter(self)
-
-    def trigger_reporter(self):
-        self._report()
-        return
 
     def trigger_mask_output(self):
         for reporter in self.reporter:
@@ -209,22 +207,19 @@ class Simulation:
         beg = timer()
 
         if self.flow.i == 0:
-            self._report()
+            self.report()
 
         for _ in range(num_steps):
+            self._collide_and_stream(self)
             if self.refinement is not None:
-                self.run_once_with_refinement()
-            else:
-                self._collide_and_stream(self)
                 self.refinement()
             self.flow.f = self.flow.f_next
             self.flow.i += 1
-            if self.flow.ref_level == 0:
-                self.trigger_reporter()
-            # do not report if sim has no refinement but is not level 0 -> sim then is finest level and needs to
-            # report when coarse_to_fine is done
-            if self.refinement is not None or self.flow.ref_level == 0:
-               self.trigger_reporter()
+            # only most coarse simulation should have the config
+            # by triggering refinement from most coarse simulation we ensure, that each sub simulation has completed
+            # all necessary steps
+            if self.refinement_config is not None:
+                self.refinement_config.trigger_reporting()
 
         end = timer()
         return num_steps * self.flow.rho().numel() / 1e6 / (end - beg)
