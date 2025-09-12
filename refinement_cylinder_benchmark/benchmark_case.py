@@ -92,13 +92,14 @@ class BenchmarkCase(ABC):
 
     def generate_drag_lift_rep(self, reporting_steps, simulation = None):
         sim = self.simulation if simulation is None else simulation
-        outfile = self.directories.get("case_dir") + os.path.sep + "drag_lift.csv"
+        outfile = self.directories.get("base_dir") + os.path.sep + "drag_lift.csv"
         return lt.ObservableReporter(lt.DragAndLiftCoefficient(sim.flow), interval=reporting_steps, out=outfile)
 
     def generate_vtk_rep(self, reporting_steps):
         return lt.VTKReporter(interval=reporting_steps, filename_base=self.directories.get("vtk") + os.path.sep + "control", flow_grid=self.simulation.flow.grid)
 
     def set_directories(self, base_dir: str):
+        self.directories["base_dir"] = base_dir
         if self.log.vtk:
             self.directories["vtk"] = os.path.join(base_dir, "vtk")
         if self.log.checkpoint > 0:
