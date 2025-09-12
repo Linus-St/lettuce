@@ -146,6 +146,19 @@ class Refinement:
         self.maximum_point_lvl0 = maximum_lvl0
         self.do_filter = do_filter
 
+    def __call__(self):
+        # 1. run coarse once
+        #   Already done in simulation directly preceding this call
+        # 2. run fine once
+        self.fine_simulation(1)
+        self.coarse_to_fine(time_interpolation=True)
+        # 3. run fine once
+        self.fine_simulation(1)
+        self.coarse_to_fine(time_interpolation=False)
+        # 4. fine -> coarse
+        self.fine_to_coarse()
+        return
+
     def fine_to_coarse(self):
         fine_flow = self.fine_simulation.flow
         coarse_flow = self.coarse_simulation.flow
@@ -170,15 +183,11 @@ class Refinement:
         f_neq = f_neq.unsqueeze(0).expand(stencil.q, -1, -1)
         return f_neq
 
-    def run_fine_sim(self, time_interpolation: bool):
-        self.fine_simulation(1)
-
+    def coarse_to_fine(self, time_interpolation: bool):
         if time_interpolation:
             f_coarse = torch.lerp(self.coarse_simulation.flow.f, self.coarse_simulation.flow.f_next, 0.5)
         else:
             f_coarse = self.coarse_simulation.flow.f_next
-
-        #_______________________________________________________________
 
         flow_coarse = self.coarse_simulation.flow
         flow_fine = self.fine_simulation.flow

@@ -94,8 +94,6 @@ class Simulation:
         def collide_and_stream(*_, **__):
             self._collide()
             self._stream()
-            if self.refinement is None:
-                self.flow.f = self.flow.f_next
 
         self._collide_and_stream = collide_and_stream
 
@@ -197,19 +195,6 @@ class Simulation:
         for reporter in self.reporter:
             reporter(self)
 
-    def run_once_with_refinement(self):
-        # 1. run parent once:
-        self._collide_and_stream(self)
-        # 2. run fine once
-        self.refinement.run_fine_sim(time_interpolation=True)
-        # 3. run fine once
-        self.refinement.run_fine_sim(time_interpolation=False)
-        #4. fine -> coarse
-        self.refinement.fine_to_coarse()
-
-        self.flow.f = self.flow.f_next
-        return
-
     def trigger_reporter(self):
         self._report()
         return
@@ -231,9 +216,15 @@ class Simulation:
                 self.run_once_with_refinement()
             else:
                 self._collide_and_stream(self)
+                self.refinement()
+            self.flow.f = self.flow.f_next
             self.flow.i += 1
             if self.flow.ref_level == 0:
                 self.trigger_reporter()
+            # do not report if sim has no refinement but is not level 0 -> sim then is finest level and needs to
+            # report when coarse_to_fine is done
+            if self.refinement is not None or self.flow.ref_level == 0:
+               self.trigger_reporter()
 
         end = timer()
         return num_steps * self.flow.rho().numel() / 1e6 / (end - beg)
