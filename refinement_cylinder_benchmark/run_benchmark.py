@@ -18,6 +18,8 @@ class BenchmarkRunner:
 
     def run(self):
         for benchmark in self.benchmarks:
+            if hasattr(benchmark, "refinement_config") and benchmark.refinement_config is not None:
+                benchmark.refinement_config.save_to_file(benchmark.directories["base_dir"])
             benchmark.run()
         return
 
