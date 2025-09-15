@@ -225,6 +225,9 @@ class Simulation:
             # all necessary steps
             if self.refinement_config is not None:
                 self.refinement_config.trigger_reporting()
+            # if no config but level 0 then there is no refinement and we have to report
+            elif self.flow.ref_level == 0:
+                self.report()
 
         end = timer()
         return num_steps * self.flow.rho().numel() / 1e6 / (end - beg)
