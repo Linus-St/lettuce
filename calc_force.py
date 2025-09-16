@@ -44,7 +44,7 @@ def calculate(file, t):
     return drag, lift
 
 def read_directory(name):
-    return sorted(os.listdir(name))
+    return sorted([d for d in os.listdir(name) if os.path.isdir(os.path.join(name, d))])
 
 def calculate_percentage_diff(control, actual):
     return abs(actual - control) * 100 / control
@@ -77,28 +77,48 @@ def read_drag_lift_from_dir(time, dir):
 
 def print_graphs(test_dirs, do_drag, do_lift):
     for test in test_dirs:
-        time, drag, lift = get_values(os.path.join(directory, test, "multi_refined", "drag_lift.csv"))
-        if do_drag:
-            plt.plot(time, drag)
-            plt.axis(ymin=0.5, ymax=1.5)
-            plt.title(test)
-            plt.show()
-        if do_lift:
-            plt.plot(time, lift)
-            plt.axis(ymin=-1, ymax=1)
-            plt.title(test)
-            plt.show()
+        if test not in ["log", "slurm_script"]:
+            time, drag, lift = get_values(os.path.join(directory, test, "drag_lift.csv"))
+            if do_drag:
+                plt.plot(time, drag)
+                plt.axis(ymin=0.5, ymax=1.5)
+                plt.title(test)
+                plt.show()
+            if do_lift:
+                plt.plot(time, lift)
+                plt.axis(ymin=-1, ymax=1)
+                plt.title(test)
+                plt.show()
+    return
+
+def values_as_json(time, directory, output, name_to_x_func):
+    tests = read_directory(directory)
+    names = []
+    x = []
+    drag_vals = []
+    lift_vals = []
+    for test in tests:
+        name = os.path.basename(test)
+        names.append(name)
+        x.append(name_to_x_func(name))
+        drag, lift = calculate(os.path.join(directory, test, "drag_lift.csv"), time)
+        drag_vals.append(drag)
+        lift_vals.append(lift)
+    x, names, drag_vals, lift_vals = list(zip(*sorted(zip(x, names, drag_vals, lift_vals))))
+    values = dict()
+    values["name"] = names
+    values["x"] = x
+    values["drag"] = drag_vals
+    values["lift"] = lift_vals
+    j = json.dumps(values)
     return
 
 
 def main():
-    tests = read_directory(directory)
-    print_graphs(tests, True, True)
+    # tests = read_directory(directory)
+    # print_graphs(tests, True, True)
+    values_as_json(100, directory, None, lambda s: float(s[1:]))
     return
 
 if __name__ == '__main__':
     main()
-
-
-
-
