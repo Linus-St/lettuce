@@ -7,23 +7,23 @@ import torch
 import lettuce as lt
 from lettuce.transformation import Transformation
 
-def mlups(steps, points, beg, end):
-    return float(steps * points / 1e6 / (end - beg))
+def mlups(steps, points, time):
+    return float(steps * points / 1e6 / time)
 
-def calculate_mlups_total(conf: 'RefinementConfig', steps_lvl0, beg, end):
-    mlups_per_level = [mlups(steps_lvl0, conf.points_per_level[0], beg, end)]
+def calculate_mlups_total(conf: 'RefinementConfig', steps_lvl0, time):
+    mlups_per_level = [mlups(steps_lvl0, conf.points_per_level[0], time)]
     for i in range(len(conf.refinement_levels)):
         level = i+1
-        mlups_per_level.append(mlups(steps_lvl0*2**level, conf.points_per_level[level], beg, end))
+        mlups_per_level.append(mlups(steps_lvl0*2**level, conf.points_per_level[level], time))
     return sum(mlups_per_level), mlups_per_level
 
-def calculate_mlups_net(conf: 'RefinementConfig', steps_lvl0, beg, end):
+def calculate_mlups_net(conf: 'RefinementConfig', steps_lvl0, time):
     mlups_net = []
     for i, ref in enumerate(conf.refinement_levels):
         inner_resolution = map(lambda a, b: b - a + 1, ref.coarse_min, ref.coarse_max)
         points = conf.points_per_level[i] - reduce(mul, inner_resolution)
-        mlups_net.append(mlups(steps_lvl0*2**i, points, beg, end))
-    mlups_net.append(mlups(steps_lvl0*2**conf.refinement_level, conf.points_per_level[-1], beg, end))
+        mlups_net.append(mlups(steps_lvl0*2**i, points, time))
+    mlups_net.append(mlups(steps_lvl0*2**conf.refinement_level, conf.points_per_level[-1], time))
     return sum(mlups_net), mlups_net
 
 def get_equilibrium(flow: 'Flow', f: 'Tensor'):
