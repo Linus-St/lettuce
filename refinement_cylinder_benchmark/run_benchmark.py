@@ -5,8 +5,10 @@ import shutil
 import os
 import subprocess
 
+import torch.cuda
+
 import lettuce as lt
-from . import benchmark_case, control_case, multi_refinement_case, refined_case
+from refinement_cylinder_benchmark import benchmark_case, control_case, multi_refinement_case
 
 
 class BenchmarkRunner:
@@ -18,20 +20,28 @@ class BenchmarkRunner:
 
     def run(self):
         for benchmark in self.benchmarks:
-            if hasattr(benchmark, "refinement_config") and benchmark.refinement_config is not None:
-                benchmark.refinement_config.save_to_file(benchmark.directories["base_dir"])
-            benchmark.run()
+            # calculate steps on coarse from parameters
+            steps = int(benchmark.simulation.units.convert_time_to_lu(benchmark.simulation_params.steps_coarse))
+            # if we continue from a checkpoint, we need to update the steps to be simulated and load checkpoints
+            if benchmark.simulation_params.continue_from_checkpoint is not None:
+                loaded_step = benchmark.read_checkpoint()
+                steps -= loaded_step
+            torch.cuda.reset_max_memory_allocated("cuda:0")
+            # run once to get memory per cycle
+            t = benchmark.run(1)
+            with open(os.path.join(benchmark.directories.get("base_dir"), "memory"), "a") as f:
+                print(f"{torch.cuda.max_memory_allocated("cuda:0")}", file=f)
+            # run remaining steps
+            t += benchmark.run(steps-1)
+            # log mlups with time and steps
+            if benchmark.log.mlups:
+                benchmark.log_mlups(t, steps)
+            with open(os.path.join(benchmark.directories.get("base_dir"), "time"), "a") as f:
+                print(f"{t}", file=f)
         return
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    # logging (3 an-aus optionen)
-    # reynolds, mach, dimensions: 1, 1, 2 number optionen (optional mit default Werten?)
-    # diameter, scaling: jeweils 1 integer, nicht optional
-    # refinement_levels: Wie of soll refined werden?
-    # num_steps, report_timing: jeweils 1 int, num_steps nicht optional, timing opt?
-    # welche Benchmarks man überhaupt möchte. Aktuell nur 3 Stück, muss erweiterbar sein
-    # optional flag to not run any simulations/create any dirs for debugging purposes
     parser.add_argument("name", type=str, help="Name of output directory")
     parser.add_argument("steps", type=int, help="Number of steps to run the simulation on the most coarse level")
     parser.add_argument("diameter", type=int, help="Diameter of the simulation on the finest level")
@@ -42,7 +52,7 @@ def get_arguments():
     parser.add_argument("--benchmarks", nargs="*", choices=["control", "once_refined", "multi_refined"], default="control", help="List of benchmarks to run (default control)")
     parser.add_argument("--report_time", type=int, default=25, help="After how many steps on the coarsest level do we trigger reporting")
     parser.add_argument("--no_running", action="store_true", help="Do not run any simulation. Helpful for debugging purposes")
-    parser.add_argument("--cont", action="store_true", help="Continue running simulation from a checkpoint")
+    parser.add_argument("--continue_from", type=int, default=None, help="Continue running simulation from a checkpoint. Steps in lu, set to 0 for last set checkpoint")
     parser.add_argument("--filter", action="store_true", help="If the filtering on border should be active")
     parser.add_argument("--framerate_export", action="store_true", help="Set export to 24 fps")
     parser.add_argument("--output_dir", default="data", help="parent directory in which to put directory for results")
@@ -57,16 +67,16 @@ def get_arguments():
     log.add_argument("-v", "--vtk", action="store_true", help="Use vtk reporter")
     log.add_argument("--mlups", action="store_true", help="Save MLups")
     log.add_argument("-f", "--force", action="store_true", help="Use Drag and Lift Reporter")
-    log.add_argument("--no_checkpoint", action="store_true", help="Use Drag and Lift Reporter")
+    log.add_argument("--checkpoint_interval", type=int, default=None, help="When to save checkpoints, time in pu (default None)")
 
     return parser.parse_args()
 
 def handle_arguments(args: argparse.Namespace):
     assert args.diameter % (2**args.refinement_levels) == 0
     args.report_time = 0 if args.framerate_export else args.report_time
-    reporter_config = benchmark_case.LoggingConfig(args.vtk, args.mlups, args.force, checkpoint = not args.no_checkpoint)
+    reporter_config = benchmark_case.LoggingConfig(args.vtk, args.mlups, args.force, checkpoint_interval=args.checkpoint_interval)
     obstacle_params = benchmark_case.ObstacleParams(None, None, args.reynolds, args.mach, args.dimensions)
-    simulation_params = benchmark_case.SimulationParams(args.steps, args.report_time, args.scaling, args.diameter, args.refinement_levels, args.space, args.cont, args.filter)
+    simulation_params = benchmark_case.SimulationParams(args.steps, args.report_time, args.scaling, args.diameter, args.refinement_levels, args.space, args.continue_from, args.filter)
     return reporter_config, obstacle_params, simulation_params
 
 
@@ -75,7 +85,7 @@ def main():
     rep, obs, sim = handle_arguments(args)
 
     base_dir = os.path.join(args.output_dir, args.name)
-    if not args.cont:
+    if args.continue_from is None:
         os.makedirs(base_dir)
         with open(os.path.join(base_dir, "args.txt"), "w") as f:
             f.write(str(args))
@@ -90,8 +100,6 @@ def main():
     disturbance = slice(2, 7)
     if "control" in args.benchmarks:
         runner.benchmarks.append(control_case.ControlBenchmark(base_dir, sim, obs, rep, disturbance))
-    if "once_refined" in args.benchmarks:
-        runner.benchmarks.append(refined_case.OnceRefinedBenchmark(base_dir, sim, obs, rep, disturbance))
     if "multi_refined" in args.benchmarks:
         runner.benchmarks.append(multi_refinement_case.MultiRefinedBenchmark(base_dir, sim, obs, rep, disturbance))
     shutil.copy(__file__, base_dir)

@@ -7,7 +7,7 @@ import torch
 import lettuce as lt
 from timeit import default_timer as timer
 
-from lettuce import calculate_mlups_total, calculate_mlups_net, Refinement
+from lettuce import calculate_mlups_total, calculate_mlups_net, Refinement, CheckpointReporter
 from refinement_cylinder_benchmark.benchmark_case import BenchmarkCase, SimulationParams, ObstacleParams, LoggingConfig
 
 
@@ -30,6 +30,7 @@ class MultiRefinedBenchmark(BenchmarkCase):
             refinements.append(self.refinement_config.add_refinement_by_index(start[i], end[i]))
 
         assert refinements[0].minimum_point_lvl0[0] >= self.disturbance_slice.stop
+        self.refinement_config.save_to_file(self.directories["base_dir"])
 
         #create flows and simulations
         len_per_point_pu = self.refinement_config.pointlength_pu
@@ -56,49 +57,45 @@ class MultiRefinedBenchmark(BenchmarkCase):
 
         return most_coarse_simulation
 
-    def run(self):
-        steps = self.simulation.units.convert_time_to_lu(self.simulation_params.steps_coarse)
-        if self.simulation_params.continue_from_checkpoint:
-            last_simulated_step = self.read_checkpoint()
-            steps -= last_simulated_step
+    def run(self, steps):
         if self.log.vtk:
             self.refinement_config.refinement_levels[-1].fine_simulation.trigger_mask_output()
         start = timer()
         self.simulation(int(steps))
         end = timer()
-        if self.log.mlups:
-            # TODO das klappt nicht, wenn wir von einem Checkpoint anfangen, da brauchen wir dann probably die verstrichenen Steps seit Anfang
-            mlups, per_level = calculate_mlups_total(self.refinement_config, self.simulation_params.steps_coarse, start,
-                                                     end)
-            mlups_net, net_per_level = calculate_mlups_net(self.refinement_config, self.simulation_params.steps_coarse,
-                                                           start, end)
-            with open(os.path.join(self.directories.get("base_dir") + os.path.sep + "mlups.txt"), "w") as f:
-                print(f"Mlups_total: {mlups}, {per_level}\n"
-                      f"Mlups_net: {mlups_net}, {net_per_level}", file=f)
-        #TODO Wenn diese Simulation selbst bereits von einem Checkpoint losging, dann erhalten wir evtl einen Fehler
-        # Das muss noch gehandelt werden
-        if self.log.checkpoint:
-            last_step = str(self.refinement_config.refinement_levels[0].coarse_simulation.flow.i)
-            for level, ref in enumerate(self.refinement_config.refinement_levels):
-                torch.save(ref.coarse_simulation.flow.f, os.path.join(self.directories["checkpoint"], f"{level}.pt"))
-            flow = self.refinement_config.refinement_levels[-1].fine_simulation.flow
-            torch.save(flow.f, os.path.join(self.directories["checkpoint"], f"{self.refinement_config.refinement_level}.pt"))
-            with open(os.path.join(self.directories.get("checkpoint"), last_step), "w") as f:
-                print(last_step, file=f)
+        return end - start
+
+    def log_mlups(self, time, steps):
+        mlups, per_level = calculate_mlups_total(self.refinement_config, steps, time)
+        mlups_net, net_per_level = calculate_mlups_net(self.refinement_config, steps, time)
+        with open(os.path.join(self.directories.get("base_dir"), "mlups.txt"), "a") as f:
+            print(f"Mlups_total: {mlups}, {per_level}\n"
+                  f"Mlups_net: {mlups_net}, {net_per_level}", file=f)
         return
 
     def read_checkpoint(self):
-        checkpoint_dir = os.listdir(self.directories.get("checkpoint"))
-        last_step = int(list((filter(lambda string: not string.endswith(".pt"), checkpoint_dir)))[0])
+        continue_from_lu = int(self.simulation_params.continue_from_checkpoint)
+        def get_last_checkpointfile(level):
+            return sorted(os.listdir(os.path.join(self.directories.get("checkpoint"), str(level))), key=lambda file_name: int(file_name[:-3]))[-1]
+        def load_for_level(level, simulation, from_lu=continue_from_lu):
+            if continue_from_lu != 0:
+                checkpoint_file = os.path.join(self.directories.get("checkpoint"), f"{level}", f"{from_lu*2**level}.pt")
+            else:
+                checkpoint_file = os.path.join(self.directories.get("checkpoint"), f"{level}", get_last_checkpointfile(level))
+            flow = simulation.flow
+            flow.f = torch.load(checkpoint_file)
+            # filename is step.pt, where step encodes step of flow when checkpoint was saved
+            continued = int(os.path.basename(checkpoint_file)[:-3])
+            flow.i = continued
+            return
+        if continue_from_lu == 0:
+            continued_from = int(get_last_checkpointfile(0)[:-3])
+        else:
+            continued_from = continue_from_lu
         for level, ref in enumerate(self.refinement_config.refinement_levels):
-            flow = ref.coarse_simulation.flow
-            flow.f = torch.load(os.path.join(self.directories.get("checkpoint"), f"{level}.pt"))
-            flow.i = last_step * 2**level
-        ref_level = self.refinement_config.refinement_level
-        flow = self.refinement_config.refinement_levels[-1].fine_simulation.flow
-        flow.f = torch.load(os.path.join(self.directories.get("checkpoint"), f"{ref_level}.pt"))
-        flow.i = last_step * 2**ref_level
-        return last_step
+            load_for_level(level, ref.coarse_simulation)
+        load_for_level(self.refinement_config.refinement_level, self.refinement_config.refinement_levels[-1].fine_simulation)
+        return continued_from
 
     def set_mask(self, flow: lt.Obstacle):
         midpoint = np.array([self.refinement_config.resolution_lvl0[1] // 2]*2)
@@ -118,6 +115,16 @@ class MultiRefinedBenchmark(BenchmarkCase):
         if self.log.drag_lift:
             d_l_reporter = self.generate_drag_lift_rep(self.simulation_params.report_steps_coarse * 2, last_simulation)
             last_simulation.reporter += [d_l_reporter]
+
+        if self.log.checkpoint_interval is not None:
+            interval_lu = int(first_simulation.flow.units.convert_time_to_lu(self.log.checkpoint_interval))
+            print(interval_lu)
+            for level, refinement in enumerate(self.refinement_config.refinement_levels):
+                reporter = CheckpointReporter(os.path.join(self.directories.get("checkpoint"), f"{level}"), interval=interval_lu*2**level)
+                refinement.coarse_simulation.reporter.append(reporter)
+            level = self.refinement_config.refinement_level
+            reporter = CheckpointReporter(os.path.join(self.directories.get("checkpoint"), f"{level}"), interval=interval_lu*2**level)
+            last_simulation.reporter.append(reporter)
 
         energy_reporter = self.generate_energyrep()
         first_simulation.reporter += [energy_reporter]

@@ -6,21 +6,21 @@ import torch
 import lettuce as lt
 
 class LoggingConfig:
-    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, checkpoint: bool = True):
+    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, checkpoint_interval: int = 10000):
         self.vtk = vtk
         self.mlups = mlups
         self.drag_lift = drag_lift
-        self.checkpoint = checkpoint
+        self.checkpoint_interval = checkpoint_interval
 
 class SimulationParams:
-    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, cont, filter):
+    def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, continue_from, filter):
         self.steps_coarse = steps_coarse
         self.scaling = scaling
         self.diameter_finest = diameter_finest
         self.report_steps_coarse = report_steps_coarse
         self.refinement_levels = ref_levels
         self.space = space
-        self.continue_from_checkpoint = cont
+        self.continue_from_checkpoint = continue_from
         self.base_diameter = int(self.diameter_finest / 2**self.refinement_levels)
         self.do_filter = filter
 
@@ -66,7 +66,7 @@ class BenchmarkCase(ABC):
         else:
             self.set_reporters()
     @abstractmethod
-    def run(self):
+    def run(self, steps):
         pass
 
     @abstractmethod
@@ -102,7 +102,7 @@ class BenchmarkCase(ABC):
         self.directories["base_dir"] = base_dir
         if self.log.vtk:
             self.directories["vtk"] = os.path.join(base_dir, "vtk")
-        if self.log.checkpoint > 0:
+        if self.log.checkpoint_interval > 0:
             self.directories["checkpoint"] = os.path.join(base_dir, "checkpoints")
         return
 
@@ -111,3 +111,11 @@ class BenchmarkCase(ABC):
             if not os.path.exists(directory):
                 os.makedirs(directory)
         return
+
+    @abstractmethod
+    def log_mlups(self, time, steps):
+        pass
+
+    @abstractmethod
+    def read_checkpoint(self):
+        pass
