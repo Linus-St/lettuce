@@ -186,7 +186,7 @@ class Refinement:
         f_neq = torch.stack([f_neq[i].roll(stencil.e[stencil.opposite[i]], [0, 1]) for i in range(stencil.q)])
         # f_neq = torch.stack([f_neq[i].roll(stencil.e[i], [0, 1]) for i in range(stencil.q)])
         f_neq = f_neq.sum(dim=0) / stencil.q
-        f_neq = f_neq.unsqueeze(0).expand(stencil.q, -1, -1)
+        f_neq = f_neq.expand(stencil.q, -1, -1)
         return f_neq
 
     def coarse_to_fine(self, time_interpolation: bool):
