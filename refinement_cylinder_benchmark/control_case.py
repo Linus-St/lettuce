@@ -59,10 +59,10 @@ class ControlBenchmark(BenchmarkCase):
         self.simulation.reporter += [self.generate_energyrep()]
         pass
 
-    def run(self):
+    def run(self, steps):
         if self.log.vtk:
             self.simulation.trigger_mask_output()
         start = timer()
-        self.simulation(int(self.simulation.flow.units.convert_time_to_lu(self.simulation_params.steps_coarse)))
+        self.simulation(int(steps))
         end = timer()
         return end - start

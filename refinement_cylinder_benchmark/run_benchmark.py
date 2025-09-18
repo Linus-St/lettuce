@@ -49,7 +49,7 @@ def get_arguments():
     parser.add_argument("refinement_levels", default=1, type=int, help="Number of refinement levels to use")
     parser.add_argument("space", type=float, help="Distance between cylinder and finest refinement level, with 1 being one diameter.")
 
-    parser.add_argument("--benchmarks", nargs="*", choices=["control", "once_refined", "multi_refined"], default="control", help="List of benchmarks to run (default control)")
+    parser.add_argument("--benchmarks", nargs="*", choices=["control", "multi_refined"], default="control", help="List of benchmarks to run (default control)")
     parser.add_argument("--report_time", type=int, default=25, help="After how many steps on the coarsest level do we trigger reporting")
     parser.add_argument("--no_running", action="store_true", help="Do not run any simulation. Helpful for debugging purposes")
     parser.add_argument("--continue_from", type=int, default=None, help="Continue running simulation from a checkpoint. Steps in lu, set to 0 for last set checkpoint")
