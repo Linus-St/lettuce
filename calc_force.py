@@ -113,11 +113,17 @@ def values_as_json(time, directory, output, name_to_x_func):
     j = json.dumps(values)
     return
 
+def drag_lift_dir_to_csv(directory):
+    tests = read_directory(directory)
+    results = []
+    for test in tests:
+        drag, lift = calculate(os.path.join(directory, test, "drag_lift.csv"), 100)
+        results.append([int(test[1:]), drag, lift])
+    results = sorted(results, key=lambda x: x[0])
+    csv = pd.DataFrame(np.array(results)).to_csv(index=False, header=False)
+    return csv
 
 def main():
-    # tests = read_directory(directory)
-    # print_graphs(tests, True, True)
-    values_as_json(100, directory, None, lambda s: float(s[1:]))
     return
 
 if __name__ == '__main__':
