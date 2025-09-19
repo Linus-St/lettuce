@@ -1,7 +1,10 @@
 import os
+from io import StringIO
+
 import torch
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def average_from_numpy(directory, result_path):
     for comp in (0, 1):
@@ -21,8 +24,7 @@ def avg_over_pt(directory, result_path):
     for i, filename in enumerate(filenames):
         data[i] = torch.load(os.path.join(directory, filename)).cpu().numpy()
     avg = np.average(data, axis=0)
-    format_avg_to_csv(avg, x_values, y_values)
-    return
+    return format_avg_to_csv(avg, x_values, y_values)
 
 def format_avg_to_csv(data, x_vals, y_vals):
     x, y = data[0], data[1]
@@ -31,6 +33,16 @@ def format_avg_to_csv(data, x_vals, y_vals):
 
     vy_df = pd.DataFrame(np.transpose(y), index=y_vals, columns=x_vals)
     vy_df_csv = vy_df.to_csv(index=True, index_label="y/D")
+    return vy_df_csv, vx_df_csv
+
+def plot(csv):
+    df = pd.read_csv(StringIO(csv), index_col=0)
+    x_d = df.columns.tolist()
+    y_d = df.index.tolist()
+    plt.plot(y_d, df[x_d[0]])
+    plt.plot(y_d, df[x_d[1]])
+    plt.plot(y_d, df[x_d[2]])
+    plt.show()
     return
 
 def main():
