@@ -30,12 +30,24 @@ class LinearXGenerator(XGenerator):
     def generate(self, midpoint):
         return tuple(range(math.ceil(midpoint+self.diameter/2), self.x_len, self.diameter*self.step_size))
 
+# Generates x values for set spaces after cylinder
+class FixedXGenerator(XGenerator):
+    def __init__(self, diameter, diameter_steps, x_len):
+        self.diameter = diameter
+        self.diameter_steps = diameter_steps
+        self.x_len = x_len
+        return
+
+    def generate(self, midpoint):
+        zero = math.ceil(midpoint+self.diameter/2)
+        x_values = list(map(lambda step: zero + step * self.diameter, self.diameter_steps))
+        return tuple(filter(lambda x: x < (self.x_len - zero), x_values))
+
 # takes a refinement config and generates x_values near the border
 # for every border to a finer grid, take x one index after border
 # for every border to a coarser grid, take x two indices before border
 class BorderXGenerator(XGenerator):
-    def __init__(self, diameter, level, refinement_config: RefinementConfig):
-        self.diameter = diameter
+    def __init__(self, level, refinement_config: RefinementConfig):
         self.refinement_config = refinement_config
         self.level = level
         self.x_border_level_0: tuple[int] = self.gather_borders()
