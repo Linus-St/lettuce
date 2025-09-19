@@ -67,6 +67,7 @@ def get_arguments():
     log.add_argument("-v", "--vtk", action="store_true", help="Use vtk reporter")
     log.add_argument("--mlups", action="store_true", help="Save MLups")
     log.add_argument("-f", "--force", action="store_true", help="Use Drag and Lift Reporter")
+    log.add_argument("--velocity_profiles", nargs="*", choices=["linear", "border", "fixed"], default=None, help="if and where to log velocity profiles")
     log.add_argument("--checkpoint_interval", type=int, default=None, help="When to save checkpoints, time in pu (default None)")
 
     return parser.parse_args()
@@ -74,7 +75,7 @@ def get_arguments():
 def handle_arguments(args: argparse.Namespace):
     assert args.diameter % (2**args.refinement_levels) == 0
     args.report_time = 0 if args.framerate_export else args.report_time
-    reporter_config = benchmark_case.LoggingConfig(args.vtk, args.mlups, args.force, checkpoint_interval=args.checkpoint_interval)
+    reporter_config = benchmark_case.LoggingConfig(args.vtk, args.mlups, args.force, args.velocity_profiles, checkpoint_interval=args.checkpoint_interval)
     obstacle_params = benchmark_case.ObstacleParams(None, None, args.reynolds, args.mach, args.dimensions)
     simulation_params = benchmark_case.SimulationParams(args.steps, args.report_time, args.scaling, args.diameter, args.refinement_levels, args.space, args.continue_from, args.filter)
     return reporter_config, obstacle_params, simulation_params

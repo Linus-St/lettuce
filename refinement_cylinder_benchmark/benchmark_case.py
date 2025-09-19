@@ -6,11 +6,12 @@ import torch
 import lettuce as lt
 
 class LoggingConfig:
-    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, checkpoint_interval: int = 10000):
+    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, velocity_profiles, checkpoint_interval: int = 10000):
         self.vtk = vtk
         self.mlups = mlups
         self.drag_lift = drag_lift
         self.checkpoint_interval = checkpoint_interval
+        self.velocity_profiles = velocity_profiles
 
 class SimulationParams:
     def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, continue_from, filter):
@@ -58,7 +59,7 @@ class BenchmarkCase(ABC):
         if not sim_params.continue_from_checkpoint:
             self.create_directories()
         self.generate_simulation()
-        # if 0 -> do framerate export -> calculate report step to be every 1/24 sekonds
+        # if 0 -> do framerate export -> calculate report step to be every 1/24 seconds
         if self.simulation_params.report_steps_coarse == 0:
             self.simulation_params.report_steps_coarse = int(self.simulation.flow.units.convert_time_to_lu(1/24))
             self.set_reporters()
