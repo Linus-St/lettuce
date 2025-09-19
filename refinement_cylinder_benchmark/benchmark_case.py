@@ -1,9 +1,11 @@
 import os
 from abc import ABC, abstractmethod
 
+import numpy as np
 import torch
 
 import lettuce as lt
+from lettuce import Refinement
 from lettuce.ext._reporter.velocity_profile_reporter import VelocityProfileReporter, FixedXGenerator, LinearXGenerator
 
 
@@ -47,6 +49,8 @@ def generate_collision(flow: lt.Obstacle):
 class BenchmarkCase(ABC):
 
     simulation: lt.Simulation
+    refinement_config: 'RefinementConfig'
+
     directories: dict[str, str]
     log: 'LoggingConfig'
 
@@ -119,6 +123,41 @@ class BenchmarkCase(ABC):
             if not os.path.exists(directory):
                 os.makedirs(directory)
         return
+
+    def create_and_set_refinement_config(self):
+        res_lvl0 = self.base_resolution()
+        self.refinement_config = lt.RefinementConfig(self.obstacle_params.physical_dims, res_lvl0, do_filter=self.simulation_params.do_filter)
+
+        # creating refinements
+        start, end = self.refinement_borders()
+        refinements: list[Refinement] = []
+        for i in range(len(start)):
+            refinements.append(self.refinement_config.add_refinement_by_index(start[i], end[i]))
+        return
+
+    def refinement_borders(self):
+        midpoint_y = self.refinement_config.resolution_lvl0[1]/2
+        radius_base = self.simulation_params.base_diameter / 2
+        lower_bound = midpoint_y - radius_base - int(self.simulation_params.space * self.simulation_params.base_diameter)
+        upper_bound = midpoint_y + radius_base + int(self.simulation_params.space * self.simulation_params.base_diameter)
+
+        start_indices_y = np.linspace(0, lower_bound, num=self.simulation_params.refinement_levels + 1, endpoint=True, dtype=int)[1:]
+        end_indices_y = np.linspace(upper_bound, self.refinement_config.resolution_lvl0[1], num=self.simulation_params.refinement_levels, endpoint=False, dtype=int)
+
+        y_diff = end_indices_y - start_indices_y
+        x_diff = 2*y_diff
+
+        start_indices_x = start_indices_y
+        end_indices_x = start_indices_x + x_diff
+
+        start_points = np.column_stack((start_indices_x, start_indices_y))
+        end_points = np.flip(np.column_stack((end_indices_x, end_indices_y)), axis=0)
+        return start_points, end_points
+
+    def base_resolution(self):
+        y_base = int(self.simulation_params.base_diameter * self.simulation_params.scaling)
+        x_base = int(2*y_base)
+        return [x_base, y_base]
 
     def add_velocity_reporter(self, simulation, generator, time, profile_name, level):
         time_lu = int(simulation.flow.units.convert_time_to_lu(time))

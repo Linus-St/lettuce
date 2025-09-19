@@ -15,22 +15,14 @@ from refinement_cylinder_benchmark.benchmark_case import BenchmarkCase, Simulati
 
 class MultiRefinedBenchmark(BenchmarkCase):
 
-    refinement_config: 'RefinementConfig'
-
     def __init__(self, base_dir: str, sim_params: SimulationParams, obst_params: ObstacleParams, logging: LoggingConfig, disturb_slice: slice):
         super().__init__(base_dir, sim_params, obst_params, logging, disturb_slice)
 
     def generate_simulation(self):
         assert(self.simulation_params.refinement_levels > 0)
         res_lvl0 = self.base_resolution()
-        self.refinement_config = lt.RefinementConfig(self.obstacle_params.physical_dims, res_lvl0, do_filter=self.simulation_params.do_filter)
-
-        # creating refinements
-        start, end = self.refinement_borders()
-        refinements: list[Refinement] = []
-        for i in range(len(start)):
-            refinements.append(self.refinement_config.add_refinement_by_index(start[i], end[i]))
-
+        self.create_and_set_refinement_config()
+        refinements = self.refinement_config.refinement_levels
         assert refinements[0].minimum_point_lvl0[0] >= self.disturbance_slice.stop
         self.refinement_config.save_to_file(self.directories["base_dir"])
 
@@ -166,28 +158,3 @@ class MultiRefinedBenchmark(BenchmarkCase):
             generator = self.create_linear_x_generator(ref.fine_simulation)
             self.add_velocity_reporter(ref.fine_simulation, generator, time, "linear", i+1)
         return
-
-    def base_resolution(self):
-        y = int(self.simulation_params.base_diameter * self.simulation_params.scaling)
-        x = int(2*y)
-        return [x, y]
-
-    def refinement_borders(self):
-        midpoint_y = self.refinement_config.resolution_lvl0[1]/2
-        radius_base = self.simulation_params.base_diameter / 2
-        lower_bound = midpoint_y - radius_base - int(self.simulation_params.space * self.simulation_params.base_diameter)
-        upper_bound = midpoint_y + radius_base + int(self.simulation_params.space * self.simulation_params.base_diameter)
-
-        start_indices_y = np.linspace(0, lower_bound, num=self.simulation_params.refinement_levels + 1, endpoint=True, dtype=int)[1:]
-        end_indices_y = np.linspace(upper_bound, self.refinement_config.resolution_lvl0[1], num=self.simulation_params.refinement_levels, endpoint=False, dtype=int)
-
-        y_diff = end_indices_y - start_indices_y
-        x_diff = 2*y_diff
-
-        start_indices_x = start_indices_y
-        end_indices_x = start_indices_x + x_diff
-
-        start_points = np.column_stack((start_indices_x, start_indices_y))
-        end_points = np.flip(np.column_stack((end_indices_x, end_indices_y)), axis=0)
-        return start_points, end_points
-

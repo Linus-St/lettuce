@@ -6,6 +6,7 @@ from timeit import default_timer as timer
 
 import torch
 
+from lettuce.ext._reporter.velocity_profile_reporter import BorderXGenerator
 from refinement_cylinder_benchmark.benchmark_case import BenchmarkCase, SimulationParams, LoggingConfig, ObstacleParams
 import lettuce as lt
 
@@ -38,6 +39,10 @@ class ControlBenchmark(BenchmarkCase):
         return [x, y]
 
     def generate_simulation(self):
+        # refinement config needed for border velocity profiles
+        self.create_and_set_refinement_config()
+        self.refinement_config.save_to_file(self.directories["base_dir"])
+
         self.obstacle_params.resolution = self.resolution()
 
         flow = lt.Obstacle(*self.obstacle_params.get(), char_length_lu=self.simulation_params.diameter_finest, disturb_slice=self.disturbance_slice)
@@ -64,7 +69,6 @@ class ControlBenchmark(BenchmarkCase):
             if "fixed" in self.log.velocity_profiles:
                 self.add_fixed_velocity_profile_reporter()
 
-
         self.simulation.reporter += [self.generate_energyrep()]
         return
 
@@ -76,7 +80,8 @@ class ControlBenchmark(BenchmarkCase):
 
     def add_border_velocity_profile_reporter(self):
         time = self.log.vp_logging_time
-
+        generator = BorderXGenerator(0, self.refinement_config)
+        self.add_velocity_reporter(self.simulation, generator, time, "border", 0)
         return
 
     def add_linear_velocity_profile_reporter(self):
