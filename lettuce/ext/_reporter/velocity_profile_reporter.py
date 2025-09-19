@@ -12,14 +12,23 @@ __all__ = ['XGenerator', 'VelocityProfileReporter']
 class XGenerator(ABC):
 
     @abstractmethod
-    def __init__(self, diameter, ):
+    def __init__(self, diameter, dimensions):
         pass
 
     #muss tupel zurück geben
     @abstractmethod
-    def generate(self):
+    def generate(self, midpoint):
         pass
 
+class LinearXGenerator(XGenerator):
+    def __init__(self, diameter, step_size, x_len):
+        self.diameter = diameter
+        self.step_size = step_size
+        self.x_len = x_len
+        return
+
+    def generate(self, midpoint):
+        return tuple(range(math.ceil(midpoint+self.diameter/2), self.x_len, self.diameter*self.step_size))
 
 
 class VelocityProfileReporter(Reporter):
