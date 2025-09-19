@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch
 
-from ... import Reporter, Simulation
+from ... import Reporter, Simulation, RefinementConfig
 
 __all__ = ['XGenerator', 'VelocityProfileReporter']
 
@@ -30,6 +30,38 @@ class LinearXGenerator(XGenerator):
     def generate(self, midpoint):
         return tuple(range(math.ceil(midpoint+self.diameter/2), self.x_len, self.diameter*self.step_size))
 
+# takes a refinement config and generates x_values near the border
+# for every border to a finer grid, take x one index after border
+# for every border to a coarser grid, take x two indices before border
+class BorderXGenerator(XGenerator):
+    def __init__(self, diameter, level, refinement_config: RefinementConfig):
+        self.diameter = diameter
+        self.refinement_config = refinement_config
+        self.level = level
+        self.x_border_level_0: tuple[int] = self.gather_borders()
+        return
+
+    def generate(self, midpoint):
+        if self.level == 0:
+            return tuple(map(lambda x: x+1, self.x_border_level_0))
+        else:
+            def border_to_fine(x):
+                # y does not need to be exact, just inside the area where coarse and fine overlap
+                y_coord = int(midpoint / 2**self.level)
+                point = np.array([x, y_coord])
+                return self.refinement_config.transform_point_to_finer_level(point, self.level)[0]
+            border_on_level = list(map(border_to_fine, self.x_border_level_0))
+            # indices of last border should be left of border (boarder to coarser level)
+            border_on_level[-1] -=  2
+            # indices of other border should be right of border (border to finer level)
+            border_on_level[0:-1] += 1
+        return tuple(border_on_level)
+
+    def gather_borders(self):
+        max_borders_x = []
+        for ref in self.refinement_config.refinement_levels:
+            max_borders_x.append(int(ref.maximum_point_lvl0[0]))
+        return tuple(max_borders_x)
 
 class VelocityProfileReporter(Reporter):
 
