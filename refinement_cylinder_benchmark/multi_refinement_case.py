@@ -142,16 +142,10 @@ class MultiRefinedBenchmark(BenchmarkCase):
 
     def add_fixed_velocity_profile_reporter(self):
         time = self.log.vp_logging_time
-        diameter_steps = self.log.vp_fixed_space
-        def create_fixed_x_generator(simulation):
-            diameter = simulation.flow.char_length_lu
-            x_len = simulation.flow.resolution[0]
-            x_generator = FixedXGenerator(diameter, diameter_steps, x_len)
-            return x_generator
-        generator = create_fixed_x_generator(self.simulation)
+        generator = self.create_fixed_x_generator(self.simulation)
         self.add_velocity_reporter(self.simulation, generator, time, "fixed", 0)
         for i, ref in enumerate(self.refinement_config.refinement_levels):
-            generator = create_fixed_x_generator(ref.fine_simulation)
+            generator = self.create_fixed_x_generator(ref.fine_simulation)
             self.add_velocity_reporter(ref.fine_simulation, generator, time, "fixed", i+1)
         return
 
@@ -166,16 +160,10 @@ class MultiRefinedBenchmark(BenchmarkCase):
 
     def add_linear_velocity_profile_reporter(self):
         time = self.log.vp_logging_time
-        step_size = self.log.vp_linear_step
-        def create_linear_x_generator(simulation):
-            diameter = simulation.flow.char_length_lu
-            x_len = simulation.flow.resolution[0]
-            x_generator = LinearXGenerator(diameter, step_size, x_len)
-            return x_generator
-        generator = create_linear_x_generator(self.simulation)
+        generator = self.create_linear_x_generator(self.simulation)
         self.add_velocity_reporter(self.simulation, generator, time, "linear", 0)
         for i, ref in enumerate(self.refinement_config.refinement_levels):
-            generator = create_linear_x_generator(ref.fine_simulation)
+            generator = self.create_linear_x_generator(ref.fine_simulation)
             self.add_velocity_reporter(ref.fine_simulation, generator, time, "linear", i+1)
         return
 

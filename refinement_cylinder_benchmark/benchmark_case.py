@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import torch
 
 import lettuce as lt
-from lettuce.ext._reporter.velocity_profile_reporter import VelocityProfileReporter
+from lettuce.ext._reporter.velocity_profile_reporter import VelocityProfileReporter, FixedXGenerator, LinearXGenerator
 
 
 class LoggingConfig:
@@ -127,6 +127,20 @@ class BenchmarkCase(ABC):
         y_len = simulation.flow.resolution[1]
         reporter = VelocityProfileReporter(directory, diameter, 2, y_len, generator, time_lu)
         simulation.reporter.append(reporter)
+
+    def create_fixed_x_generator(self, simulation):
+        diameter_steps = self.log.vp_fixed_space
+        diameter = simulation.flow.char_length_lu
+        x_len = simulation.flow.resolution[0]
+        x_generator = FixedXGenerator(diameter, diameter_steps, x_len)
+        return x_generator
+
+    def create_linear_x_generator(self, simulation):
+        step_size = self.log.vp_linear_step
+        diameter = simulation.flow.char_length_lu
+        x_len = simulation.flow.resolution[0]
+        x_generator = LinearXGenerator(diameter, step_size, x_len)
+        return x_generator
 
     @abstractmethod
     def log_mlups(self, time, steps):

@@ -56,8 +56,34 @@ class ControlBenchmark(BenchmarkCase):
             vtk_reporter = self.generate_vtk_rep(self.simulation_params.report_steps_coarse)
             self.simulation.reporter += [vtk_reporter]
 
+        if self.log.velocity_profiles is not None:
+            if "linear" in self.log.velocity_profiles:
+                self.add_linear_velocity_profile_reporter()
+            if "border" in self.log.velocity_profiles:
+                self.add_border_velocity_profile_reporter()
+            if "fixed" in self.log.velocity_profiles:
+                self.add_fixed_velocity_profile_reporter()
+
+
         self.simulation.reporter += [self.generate_energyrep()]
-        pass
+        return
+
+    def add_fixed_velocity_profile_reporter(self):
+        time = self.log.vp_logging_time
+        generator = self.create_fixed_x_generator(self.simulation)
+        self.add_velocity_reporter(self.simulation, generator, time, "fixed", 0)
+        return
+
+    def add_border_velocity_profile_reporter(self):
+        time = self.log.vp_logging_time
+
+        return
+
+    def add_linear_velocity_profile_reporter(self):
+        time = self.log.vp_logging_time
+        generator = self.create_linear_x_generator(self.simulation)
+        self.add_velocity_reporter(self.simulation, generator, time, "linear", 0)
+        return
 
     def run(self, steps):
         if self.log.vtk:
