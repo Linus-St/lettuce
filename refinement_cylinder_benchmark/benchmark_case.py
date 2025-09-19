@@ -8,12 +8,15 @@ from lettuce.ext._reporter.velocity_profile_reporter import VelocityProfileRepor
 
 
 class LoggingConfig:
-    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, velocity_profiles, checkpoint_interval: int = 10000):
+    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, velocity_profiles, vp_logging_time, vp_fixed_space, vp_linear_step, checkpoint_interval: int = 10000):
         self.vtk = vtk
         self.mlups = mlups
         self.drag_lift = drag_lift
         self.checkpoint_interval = checkpoint_interval
         self.velocity_profiles = velocity_profiles
+        self.vp_logging_time = vp_logging_time
+        self.vp_fixed_space = vp_fixed_space
+        self.vp_linear_step = vp_linear_step
 
 class SimulationParams:
     def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, continue_from, filter):
@@ -116,14 +119,6 @@ class BenchmarkCase(ABC):
             if not os.path.exists(directory):
                 os.makedirs(directory)
         return
-
-    def get_velocity_fixed_config(self):
-        return [1, 2, 5, 10, 20, 50], 10
-
-    def get_velocity_linear_config(self):
-        time = 10
-        stepsize = 2
-        return stepsize, time
 
     def add_velocity_reporter(self, simulation, generator, time, profile_name, level):
         time_lu = int(simulation.flow.units.convert_time_to_lu(time))

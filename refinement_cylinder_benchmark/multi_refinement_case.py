@@ -141,7 +141,8 @@ class MultiRefinedBenchmark(BenchmarkCase):
         return
 
     def add_fixed_velocity_profile_reporter(self):
-        diameter_steps, time = self.get_velocity_fixed_config()
+        time = self.log.vp_logging_time
+        diameter_steps = self.log.vp_fixed_space
         def create_fixed_x_generator(simulation):
             diameter = simulation.flow.char_length_lu
             x_len = simulation.flow.resolution[0]
@@ -155,8 +156,7 @@ class MultiRefinedBenchmark(BenchmarkCase):
         return
 
     def add_border_velocity_profile_reporter(self):
-        #TODO
-        time = 10
+        time = self.log.vp_logging_time
         generator = BorderXGenerator(0, self.refinement_config)
         self.add_velocity_reporter(self.simulation, generator, time, "border", 0)
         for i, ref in enumerate(self.refinement_config.refinement_levels):
@@ -165,7 +165,8 @@ class MultiRefinedBenchmark(BenchmarkCase):
         return
 
     def add_linear_velocity_profile_reporter(self):
-        step_size, time = self.get_velocity_linear_config()
+        time = self.log.vp_logging_time
+        step_size = self.log.vp_linear_step
         def create_linear_x_generator(simulation):
             diameter = simulation.flow.char_length_lu
             x_len = simulation.flow.resolution[0]
