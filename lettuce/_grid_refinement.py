@@ -94,6 +94,17 @@ class RefinementConfig:
             simulation.reporter.append(reporter)
         return
 
+    # returns nothing if point is out of bounds for level
+    # use with level 0 indices only
+    def transform_point_to_finer_level(self, point, level):
+        p = np.array(point)
+        for l in range(level):
+            ref = self.refinement_levels[l]
+            p = ref.transform.coarse_to_fine(p)
+            if p is None:
+                return None
+        return p
+
     def __str__(self):
         result = 'base resolution: ' + str(self.resolution_lvl0) + '\n'
         result += 'refinement levels: ' + str(self.refinement_level) + '\n'
