@@ -243,7 +243,7 @@ class Refinement:
 
     def __str__(self):
         result = f'refinement start: ({str(self.coarse_min[0])}, {str(self.coarse_min[1])})\n'
-        result += f'refinement end: ({str(self.coarse_max[0])}, {str(self.coarse_min[1])})\n'
+        result += f'refinement end: ({str(self.coarse_max[0])}, {str(self.coarse_max[1])})\n'
         result += f'resolution: {self.resolution}\n'
         result += 'refinement start on level 0: ' + str(self.minimum_point_lvl0) + '\n'
         result += 'refinement end on level 0: ' + str(self.maximum_point_lvl0)
