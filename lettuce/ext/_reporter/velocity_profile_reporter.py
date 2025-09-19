@@ -68,7 +68,7 @@ class BorderXGenerator(XGenerator):
             border_on_level[-1] -=  2
             # indices of other border should be right of border (border to finer level)
             if len(border_on_level) > 1:
-                border_on_level[0:-1] += 1
+                border_on_level[0:-1] = list(map(lambda x: x+1, border_on_level[0:-1]))
         return tuple(border_on_level)
 
     def gather_borders(self):
