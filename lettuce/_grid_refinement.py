@@ -33,8 +33,8 @@ def get_equilibrium(flow: 'Flow', f: 'Tensor'):
 
 class RefinementConfig:
     refinement_levels: list['Refinement']
-    dimensions_lvl0_pu: np.array
-    resolution_lvl0: np.array
+    dimensions_lvl0_pu: np.ndarray
+    resolution_lvl0: np.ndarray
     do_filter: bool
 
     def __init__(self, physical_dimensions: list[int], resolution: list[int], do_filter: False):
@@ -59,11 +59,11 @@ class RefinementConfig:
     def pointlength_pu(self):
         return self.dimensions_lvl0_pu / self.resolution_lvl0
 
-    def add_refinement(self, start_physical: np.array, end_physical: np.array):
+    def add_refinement(self, start_physical: np.ndarray, end_physical: np.ndarray):
         self.add_refinement_relative(start_physical / self.dimensions_lvl0_pu[0], end_physical / self.dimensions_lvl0_pu[1])
         return
 
-    def add_refinement_by_index(self, start_point: np.array, end_point: np.array):
+    def add_refinement_by_index(self, start_point: np.ndarray, end_point: np.ndarray):
         minimum_coarse = start_point
         maximum_coarse = end_point
         for refinement in self.refinement_levels:
@@ -72,7 +72,7 @@ class RefinementConfig:
         self.refinement_levels.append(Refinement(minimum_coarse, maximum_coarse, start_point, end_point, do_filter=self.do_filter))
         return self.refinement_levels[-1]
 
-    def add_refinement_relative(self, start_relative: np.array, end_relative: np.array):
+    def add_refinement_relative(self, start_relative: np.ndarray, end_relative: np.ndarray):
         # rint rundet auf den nächsten geraden int (0.5 -> 0, 1.5 -> 2). Mit trunc rundet man immer runter
         minimum_coarse = minimum_coarse_lvl0 = np.rint(self.resolution_lvl0 * start_relative).astype(int, casting='unsafe')
         maximum_coarse = maximum_coarse_lvl0 = np.rint(self.resolution_lvl0 * end_relative).astype(int, casting='unsafe')
