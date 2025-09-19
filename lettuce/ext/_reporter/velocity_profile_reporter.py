@@ -128,6 +128,6 @@ class VelocityProfileReporter(Reporter):
                 self.save_to_file(x, comp, y_values[comp, x, :])
 
     def save_to_file(self, x, u_comp, values: np.ndarray):
-        filepath = os.path.join(self.dir_x, str(x)) if u_comp is 1 else os.path.join(self.dir_y, str(x))
+        filepath = os.path.join(self.dir_x, str(x)) if u_comp == 1 else os.path.join(self.dir_y, str(x))
         np.savetxt(filepath, values)
         return
