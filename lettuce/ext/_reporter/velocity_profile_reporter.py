@@ -7,7 +7,7 @@ import torch
 
 from ... import Reporter, Simulation, RefinementConfig
 
-__all__ = ['XGenerator', 'VelocityProfileReporter']
+__all__ = ['XGenerator', 'LinearXGenerator', 'FixedXGenerator', 'BorderXGenerator', 'VelocityProfileReporter']
 
 class XGenerator(ABC):
 
@@ -59,14 +59,16 @@ class BorderXGenerator(XGenerator):
         else:
             def border_to_fine(x):
                 # y does not need to be exact, just inside the area where coarse and fine overlap
-                y_coord = int(midpoint / 2**self.level)
+                y_coord = int(self.refinement_config.refinement_levels[self.level-1].fine_simulation.flow.resolution[1]/ 2**self.level)
                 point = np.array([x, y_coord])
-                return self.refinement_config.transform_point_to_finer_level(point, self.level)[0]
+                transformed_point = self.refinement_config.transform_point_to_finer_level(point, self.level)
+                return transformed_point[0] if transformed_point is not None else None
             border_on_level = list(map(border_to_fine, self.x_border_level_0))
             # indices of last border should be left of border (boarder to coarser level)
             border_on_level[-1] -=  2
             # indices of other border should be right of border (border to finer level)
-            border_on_level[0:-1] += 1
+            if len(border_on_level) > 1:
+                border_on_level[0:-1] += 1
         return tuple(border_on_level)
 
     def gather_borders(self):
@@ -87,7 +89,9 @@ class VelocityProfileReporter(Reporter):
         self.d = diameter
         #TODO testen ob übereinstimmung mit center of diameter
         self.y_slice, self.y_d = self.setup_y(y_len, y_span)
-        self.x_d = xgenerator.generate()
+        midpoint = y_len / 2
+        self.x_indices = xgenerator.generate(y_len / 2)
+        self.x_d = tuple(map(lambda x_index: (x_index - math.ceil(midpoint + diameter/2))/diameter, self.x_indices))
         self.begin_at = begin_at
         np.savetxt(os.path.join(self.directory, 'x_values'), np.array(self.x_d))
         np.savetxt(os.path.join(self.directory, 'y_values'), np.array(self.y_d))
@@ -99,14 +103,14 @@ class VelocityProfileReporter(Reporter):
         if mid + y_diff < y_len:
             y_slice = slice(math.ceil(mid - y_diff), math.floor(mid + y_diff) + 1)
         else:
-            y_slice = slice(0)
+            y_slice = slice(0, y_len)
         y_d = [(i - mid) / self.d for i in range (y_slice.start, y_slice.stop)]
         return y_slice, y_d
 
     def __call__(self, simulation: 'Simulation'):
         if simulation.flow.i >= self.begin_at:
             u = simulation.flow.u()
-            y_values = u[:, self.x_d, self.y_slice]
+            y_values = u[:, self.x_indices, self.y_slice]
             self.save(y_values, simulation.flow.i)
         return
 
