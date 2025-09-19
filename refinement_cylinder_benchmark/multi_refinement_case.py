@@ -8,6 +8,8 @@ import lettuce as lt
 from timeit import default_timer as timer
 
 from lettuce import calculate_mlups_total, calculate_mlups_net, Refinement, CheckpointReporter
+from lettuce.ext._reporter.velocity_profile_reporter import LinearXGenerator, FixedXGenerator, VelocityProfileReporter, \
+    BorderXGenerator
 from refinement_cylinder_benchmark.benchmark_case import BenchmarkCase, SimulationParams, ObstacleParams, LoggingConfig
 
 
@@ -126,8 +128,54 @@ class MultiRefinedBenchmark(BenchmarkCase):
             reporter = CheckpointReporter(os.path.join(self.directories.get("checkpoint"), f"{level}"), interval=interval_lu*2**level)
             last_simulation.reporter.append(reporter)
 
+        if self.log.velocity_profiles is not None:
+            if "fixed" in self.log.velocity_profiles:
+                self.add_fixed_velocity_profile_reporter()
+            if "border" in self.log.velocity_profiles:
+                self.add_border_velocity_profile_reporter()
+            if "linear" in self.log.velocity_profiles:
+                self.add_linear_velocity_profile_reporter()
+
         energy_reporter = self.generate_energyrep()
         first_simulation.reporter += [energy_reporter]
+        return
+
+    def add_fixed_velocity_profile_reporter(self):
+        diameter_steps, time = self.get_velocity_fixed_config()
+        def create_fixed_x_generator(simulation):
+            diameter = simulation.flow.char_length_lu
+            x_len = simulation.flow.resolution[0]
+            x_generator = FixedXGenerator(diameter, diameter_steps, x_len)
+            return x_generator
+        generator = create_fixed_x_generator(self.simulation)
+        self.add_velocity_reporter(self.simulation, generator, time, "fixed", 0)
+        for i, ref in enumerate(self.refinement_config.refinement_levels):
+            generator = create_fixed_x_generator(ref.fine_simulation)
+            self.add_velocity_reporter(ref.fine_simulation, generator, time, "fixed", i+1)
+        return
+
+    def add_border_velocity_profile_reporter(self):
+        #TODO
+        time = 10
+        generator = BorderXGenerator(0, self.refinement_config)
+        self.add_velocity_reporter(self.simulation, generator, time, "border", 0)
+        for i, ref in enumerate(self.refinement_config.refinement_levels):
+            generator = BorderXGenerator(i+1, self.refinement_config)
+            self.add_velocity_reporter(ref.fine_simulation, generator, time, "border", i+1)
+        return
+
+    def add_linear_velocity_profile_reporter(self):
+        step_size, time = self.get_velocity_linear_config()
+        def create_linear_x_generator(simulation):
+            diameter = simulation.flow.char_length_lu
+            x_len = simulation.flow.resolution[0]
+            x_generator = LinearXGenerator(diameter, step_size, x_len)
+            return x_generator
+        generator = create_linear_x_generator(self.simulation)
+        self.add_velocity_reporter(self.simulation, generator, time, "linear", 0)
+        for i, ref in enumerate(self.refinement_config.refinement_levels):
+            generator = create_linear_x_generator(ref.fine_simulation)
+            self.add_velocity_reporter(ref.fine_simulation, generator, time, "linear", i+1)
         return
 
     def base_resolution(self):

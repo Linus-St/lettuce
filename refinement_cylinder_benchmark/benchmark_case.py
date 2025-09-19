@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 import torch
 
 import lettuce as lt
+from lettuce.ext._reporter.velocity_profile_reporter import VelocityProfileReporter
+
 
 class LoggingConfig:
     def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, velocity_profiles, checkpoint_interval: int = 10000):
@@ -103,8 +105,10 @@ class BenchmarkCase(ABC):
         self.directories["base_dir"] = base_dir
         if self.log.vtk:
             self.directories["vtk"] = os.path.join(base_dir, "vtk")
-        if self.log.checkpoint_interval > 0:
+        if self.log.checkpoint_interval is not None and self.log.checkpoint_interval > 0:
             self.directories["checkpoint"] = os.path.join(base_dir, "checkpoints")
+        if self.log.velocity_profiles is not None:
+            self.directories["velocity_profiles"] = os.path.join(base_dir, "velocity_profiles")
         return
 
     def create_directories(self):
@@ -112,6 +116,22 @@ class BenchmarkCase(ABC):
             if not os.path.exists(directory):
                 os.makedirs(directory)
         return
+
+    def get_velocity_fixed_config(self):
+        return [1, 2, 5, 10, 20, 50], 10
+
+    def get_velocity_linear_config(self):
+        time = 10
+        stepsize = 2
+        return stepsize, time
+
+    def add_velocity_reporter(self, simulation, generator, time, profile_name, level):
+        time_lu = int(simulation.flow.units.convert_time_to_lu(time))
+        directory = os.path.join(self.directories.get("velocity_profiles"), profile_name, str(level))
+        diameter = simulation.flow.char_length_lu
+        y_len = simulation.flow.resolution[1]
+        reporter = VelocityProfileReporter(directory, diameter, 2, y_len, generator, time_lu)
+        simulation.reporter.append(reporter)
 
     @abstractmethod
     def log_mlups(self, time, steps):
