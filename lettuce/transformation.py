@@ -16,6 +16,13 @@ class Transformation:
         else:
             return
 
+    def x_coarse_to_fine(self, coord: int):
+        if self.coarse_input_valid(np.array([coord, self.minimum_coarse[1]])):
+            result = 2*(coord - self.minimum_coarse[0])
+            return result
+        else:
+            return
+
     def fine_to_coarse(self, coords: np.ndarray):
         if 1 in (coords % 2):
             print("only even numbers are convertible to coarse: ", coords)

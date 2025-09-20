@@ -105,6 +105,15 @@ class RefinementConfig:
                 return None
         return p
 
+    def transform_x_to_finer_level(self, x, level):
+        p = x
+        for l in range(level):
+            ref = self.refinement_levels[l]
+            p = ref.transform.x_coarse_to_fine(p)
+            if p is None:
+                return None
+        return p
+
     def __str__(self):
         result = 'base resolution: ' + str(self.resolution_lvl0) + '\n'
         result += 'refinement levels: ' + str(self.refinement_level) + '\n'
