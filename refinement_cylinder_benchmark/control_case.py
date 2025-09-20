@@ -72,7 +72,7 @@ class ControlBenchmark(BenchmarkCase):
 
         if self.log.checkpoint_interval is not None and self.log.checkpoint_interval > 0:
             interval = int(self.simulation.flow.units.convert_time_to_lu(self.log.checkpoint_interval))
-            reporter = CheckpointReporter(self.directories.get("checkpoints"), interval=interval)
+            reporter = CheckpointReporter(self.directories.get("checkpoint"), interval=interval)
             self.simulation.reporter += [reporter]
 
         self.simulation.reporter += [self.generate_energyrep()]
