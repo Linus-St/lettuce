@@ -28,7 +28,7 @@ class LinearXGenerator(XGenerator):
         return
 
     def generate(self, midpoint):
-        return tuple(range(math.ceil(midpoint+self.diameter/2), self.x_len, self.diameter*self.step_size))
+        return tuple(range(math.ceil(midpoint+self.diameter/2), self.x_len, math.floor(self.diameter*self.step_size)))
 
 # Generates x values for set spaces after cylinder
 class FixedXGenerator(XGenerator):

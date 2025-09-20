@@ -68,10 +68,10 @@ def get_arguments():
     log.add_argument("--mlups", action="store_true", help="Save MLups")
     log.add_argument("-f", "--force", action="store_true", help="Use Drag and Lift Reporter")
     log.add_argument("--velocity_profiles", nargs="*", choices=["linear", "border", "fixed"], default=None, help="if and where to log velocity profiles")
-    log.add_argument("--velocity_profile_logging_time", type=int, default=100, help="Time to start logging velocity profiles in pu (s) (default 100)")
-    log.add_argument("--fixed_profile_space", nargs="*", type=int, default=[1, 2, 5, 10, 50], help="space from cylinder in diameter where to create velocity profiles (default [1, 2, 5, 10, 50])")
-    log.add_argument("--linear_profile_step",  type=int, default=2 , help="distance between each velocity profile in diameter, (default 2)")
-    log.add_argument("--checkpoint_interval", type=int, default=None, help="When to save checkpoints, time in pu (default None)")
+    log.add_argument("--velocity_profile_logging_time", type=float, default=100, help="Time to start logging velocity profiles in pu (s) (default 100)")
+    log.add_argument("--fixed_profile_space", nargs="*", type=float, default=[1, 2, 5, 10, 50], help="space from cylinder in diameter where to create velocity profiles (default [1, 2, 5, 10, 50])")
+    log.add_argument("--linear_profile_step",  type=float, default=2 , help="distance between each velocity profile in diameter, (default 2)")
+    log.add_argument("--checkpoint_interval", type=float, default=None, help="When to save checkpoints, time in pu (default None)")
 
     return parser.parse_args()
 
