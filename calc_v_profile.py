@@ -1,4 +1,5 @@
 import os
+import sys
 from io import StringIO
 
 import torch
@@ -6,14 +7,14 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def average_from_numpy(directory, result_path):
+def average_from_numpy(directory):
     for comp in (0, 1):
         results = dict()
         for filename in os.listdir(os.join(directory, f"{comp}")):
             data = np.loadtxt(os.path.join(directory, filename))
             results[filename] = np.average(data, axis=0)
 
-def avg_over_pt(directory, result_path):
+def avg_over_pt(directory):
     filenames = os.listdir(directory)
     x_values = np.loadtxt(os.path.join(directory, "x_values"))
     y_values = np.loadtxt(os.path.join(directory, "y_values"))
@@ -46,6 +47,14 @@ def plot(csv):
     return
 
 def main():
+    directory = sys.argv[1]
+    output = sys.argv[2]
+    t = sys.argv[3]
+    x, y = avg_over_pt(directory)
+    with open(os.path.join(output, f"{t}_ux.csv"), "w") as f:
+        f.write(x)
+    with open(os.path.join(output, f"{t}_uy.csv"), "w") as f:
+        f.write(y)
     return
 
 if __name__ == "__main__":
