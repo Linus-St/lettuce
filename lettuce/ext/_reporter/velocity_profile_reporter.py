@@ -62,10 +62,11 @@ class BorderXGenerator(XGenerator):
                 return transformed if transformed is not None else None
             border_on_level = [x for x in map(border_to_fine, self.x_border_level_0) if x is not None]
             # indices of last border should be left of border (boarder to coarser level)
-            border_on_level[-1] -=  2
+            # last border (border furthest to the right) is first in list, because list comes from going through refinements, first refinement ends furthest right
+            border_on_level[0] -=  2
             # indices of other border should be right of border (border to finer level)
             if len(border_on_level) > 1:
-                border_on_level[0:-1] = list(map(lambda x: x+1, border_on_level[0:-1]))
+                border_on_level[1:] = list(map(lambda x: x+1, border_on_level[1:]))
         return tuple(border_on_level)
 
     def gather_borders(self):
