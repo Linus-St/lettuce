@@ -58,12 +58,9 @@ class BorderXGenerator(XGenerator):
             return tuple(map(lambda x: x+1, self.x_border_level_0))
         else:
             def border_to_fine(x):
-                # y does not need to be exact, just inside the area where coarse and fine overlap
-                y_coord = int(self.refinement_config.refinement_levels[self.level-1].fine_simulation.flow.resolution[1]/ 2**self.level)
-                point = np.array([x, y_coord])
-                transformed_point = self.refinement_config.transform_point_to_finer_level(point, self.level)
-                return transformed_point[0] if transformed_point is not None else None
-            border_on_level = list(map(border_to_fine, self.x_border_level_0))
+                transformed = self.refinement_config.transform_x_to_finer_level(x, self.level)
+                return transformed if transformed is not None else None
+            border_on_level = [x for x in map(border_to_fine, self.x_border_level_0) if x is not None]
             # indices of last border should be left of border (boarder to coarser level)
             border_on_level[-1] -=  2
             # indices of other border should be right of border (border to finer level)
