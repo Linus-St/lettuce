@@ -6,6 +6,7 @@ from timeit import default_timer as timer
 
 import torch
 
+from lettuce import CheckpointReporter
 from lettuce.ext._reporter.velocity_profile_reporter import BorderXGenerator
 from refinement_cylinder_benchmark.benchmark_case import BenchmarkCase, SimulationParams, LoggingConfig, ObstacleParams
 import lettuce as lt
@@ -68,6 +69,11 @@ class ControlBenchmark(BenchmarkCase):
                 self.add_border_velocity_profile_reporter()
             if "fixed" in self.log.velocity_profiles:
                 self.add_fixed_velocity_profile_reporter()
+
+        if self.log.checkpoint_interval is not None and self.log.checkpoint_interval > 0:
+            interval = int(self.simulation.flow.units.convert_time_to_lu(self.log.checkpoint_interval))
+            reporter = CheckpointReporter(self.directories.get("checkpoints"), interval=interval)
+            self.simulation.reporter += [reporter]
 
         self.simulation.reporter += [self.generate_energyrep()]
         return
