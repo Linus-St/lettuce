@@ -98,7 +98,7 @@ class BenchmarkCase(ABC):
         return lt.BGKCollision(flow.units.relaxation_parameter_lu)
 
     def generate_energyrep(self):
-        return lt.ObservableReporter(lt.IncompressibleKineticEnergy(self.simulation.flow), interval=100)
+        return lt.ObservableReporter(lt.IncompressibleKineticEnergy(self.simulation.flow), interval=2000)
 
     def generate_drag_lift_rep(self, reporting_steps, simulation = None):
         sim = self.simulation if simulation is None else simulation
