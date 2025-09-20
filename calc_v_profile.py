@@ -19,11 +19,11 @@ def avg_over_pt(directory):
     x_values = np.loadtxt(os.path.join(directory, "x_values"))
     y_values = np.loadtxt(os.path.join(directory, "y_values"))
     filenames = list(filter(lambda f: f.endswith(".pt"), filenames))
-    sample = torch.load(os.path.join(directory, filenames[0]))
+    sample = torch.load(os.path.join(directory, filenames[0]), device="cpu")
     data = np.ndarray((len(filenames), *sample.size()))
 
     for i, filename in enumerate(filenames):
-        data[i] = torch.load(os.path.join(directory, filename)).cpu().numpy()
+        data[i] = torch.load(os.path.join(directory, filename), device="cpu").numpy()
     avg = np.average(data, axis=0)
     return format_avg_to_csv(avg, x_values, y_values)
 
