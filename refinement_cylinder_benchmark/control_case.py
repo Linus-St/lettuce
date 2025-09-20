@@ -86,7 +86,7 @@ class ControlBenchmark(BenchmarkCase):
 
     def add_border_velocity_profile_reporter(self):
         time = self.log.vp_logging_time
-        generator = BorderXGenerator(0, self.refinement_config)
+        generator = BorderXGenerator(0, self.refinement_config, is_control=True)
         self.add_velocity_reporter(self.simulation, generator, time, "border", 0)
         return
 

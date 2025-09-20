@@ -47,10 +47,12 @@ class FixedXGenerator(XGenerator):
 # for every border to a finer grid, take x one index after border
 # for every border to a coarser grid, take x two indices before border
 class BorderXGenerator(XGenerator):
-    def __init__(self, level, refinement_config: RefinementConfig):
+    def __init__(self, level, refinement_config: RefinementConfig, is_control: bool = False):
         self.refinement_config = refinement_config
         self.level = level
-        self.x_border_level_0: tuple[int] = self.gather_borders()
+        self.x_border_level_0: tuple[int, ...] = self.gather_borders()
+        if is_control:
+            self.x_border_level_0 = tuple([int(x * 2**self.refinement_config.refinement_level) for x in self.x_border_level_0])
         return
 
     def generate(self, midpoint):
