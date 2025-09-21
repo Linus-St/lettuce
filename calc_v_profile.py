@@ -29,10 +29,10 @@ def avg_over_pt(directory):
 
 def format_avg_to_csv(data, x_vals, y_vals):
     x, y = data[0], data[1]
-    vx_df = pd.DataFrame(np.transpose(x), index=y_vals, columns=x_vals)
+    vx_df = pd.DataFrame(np.transpose(x), index=y_vals, columns=list(x_vals))
     vx_df_csv = vx_df.to_csv(index=True, index_label="y/D")
 
-    vy_df = pd.DataFrame(np.transpose(y), index=y_vals, columns=x_vals)
+    vy_df = pd.DataFrame(np.transpose(y), index=y_vals, columns=list(x_vals))
     vy_df_csv = vy_df.to_csv(index=True, index_label="y/D")
     return vy_df_csv, vx_df_csv
 
@@ -49,11 +49,11 @@ def plot(csv):
 def main():
     directory = sys.argv[1]
     output = sys.argv[2]
-    t = sys.argv[3]
+    prefix = sys.argv[3]
     x, y = avg_over_pt(directory)
-    with open(os.path.join(output, f"{t}_ux.csv"), "w") as f:
+    with open(os.path.join(output, f"{prefix}_ux.csv"), "w") as f:
         f.write(x)
-    with open(os.path.join(output, f"{t}_uy.csv"), "w") as f:
+    with open(os.path.join(output, f"{prefix}_uy.csv"), "w") as f:
         f.write(y)
     return
 
