@@ -62,13 +62,16 @@ class ControlBenchmark(BenchmarkCase):
             vtk_reporter = self.generate_vtk_rep(self.simulation_params.report_steps_coarse)
             self.simulation.reporter += [vtk_reporter]
 
-        if self.log.velocity_profiles is not None:
+        if self.log.velocity_profiles is not None and len(self.log.velocity_profiles) > 0:
+            generators = []
+            time = self.log.vp_logging_time
             if "linear" in self.log.velocity_profiles:
-                self.add_linear_velocity_profile_reporter()
+                generators.append(self.create_linear_x_generator(self.simulation))
             if "border" in self.log.velocity_profiles:
-                self.add_border_velocity_profile_reporter()
+                generators.append(BorderXGenerator(0, self.refinement_config, is_control=True))
             if "fixed" in self.log.velocity_profiles:
-                self.add_fixed_velocity_profile_reporter()
+                generators.append(self.create_fixed_x_generator(self.simulation))
+            self.add_velocity_reporter(self.simulation, generators, time, 0)
 
         if self.log.checkpoint_interval is not None and self.log.checkpoint_interval > 0:
             interval = int(self.simulation.flow.units.convert_time_to_lu(self.log.checkpoint_interval))
@@ -76,24 +79,6 @@ class ControlBenchmark(BenchmarkCase):
             self.simulation.reporter += [reporter]
 
         self.simulation.reporter += [self.generate_energyrep()]
-        return
-
-    def add_fixed_velocity_profile_reporter(self):
-        time = self.log.vp_logging_time
-        generator = self.create_fixed_x_generator(self.simulation)
-        self.add_velocity_reporter(self.simulation, generator, time, "fixed", 0)
-        return
-
-    def add_border_velocity_profile_reporter(self):
-        time = self.log.vp_logging_time
-        generator = BorderXGenerator(0, self.refinement_config, is_control=True)
-        self.add_velocity_reporter(self.simulation, generator, time, "border", 0)
-        return
-
-    def add_linear_velocity_profile_reporter(self):
-        time = self.log.vp_logging_time
-        generator = self.create_linear_x_generator(self.simulation)
-        self.add_velocity_reporter(self.simulation, generator, time, "linear", 0)
         return
 
     def run(self, steps):

@@ -120,41 +120,27 @@ class MultiRefinedBenchmark(BenchmarkCase):
             reporter = CheckpointReporter(os.path.join(self.directories.get("checkpoint"), f"{level}"), interval=interval_lu*2**level)
             last_simulation.reporter.append(reporter)
 
-        if self.log.velocity_profiles is not None:
+        if self.log.velocity_profiles is not None and len(self.log.velocity_profiles) > 0:
+            time = self.log.vp_logging_time
+            generators = []
             if "fixed" in self.log.velocity_profiles:
-                self.add_fixed_velocity_profile_reporter()
+                generators.append(self.create_fixed_x_generator(self.simulation))
             if "border" in self.log.velocity_profiles:
-                self.add_border_velocity_profile_reporter()
+                generators.append(BorderXGenerator(0, self.refinement_config))
             if "linear" in self.log.velocity_profiles:
-                self.add_linear_velocity_profile_reporter()
+                generators.append(self.create_linear_x_generator(self.simulation))
+            self.add_velocity_reporter(self.simulation, generators, time, 0)
+
+            for level, refinement in enumerate(self.refinement_config.refinement_levels):
+                generators = []
+                if "fixed" in self.log.velocity_profiles:
+                    generators.append(self.create_fixed_x_generator(refinement.fine_simulation))
+                if "border" in self.log.velocity_profiles:
+                    generators.append(BorderXGenerator(level, self.refinement_config))
+                if "linear" in self.log.velocity_profiles:
+                    generators.append(self.create_linear_x_generator(refinement.fine_simulation))
+                self.add_velocity_reporter(refinement.fine_simulation, generators, time, level + 1)
 
         energy_reporter = self.generate_energyrep()
         first_simulation.reporter += [energy_reporter]
-        return
-
-    def add_fixed_velocity_profile_reporter(self):
-        time = self.log.vp_logging_time
-        generator = self.create_fixed_x_generator(self.simulation)
-        self.add_velocity_reporter(self.simulation, generator, time, "fixed", 0)
-        for i, ref in enumerate(self.refinement_config.refinement_levels):
-            generator = self.create_fixed_x_generator(ref.fine_simulation)
-            self.add_velocity_reporter(ref.fine_simulation, generator, time, "fixed", i+1)
-        return
-
-    def add_border_velocity_profile_reporter(self):
-        time = self.log.vp_logging_time
-        generator = BorderXGenerator(0, self.refinement_config)
-        self.add_velocity_reporter(self.simulation, generator, time, "border", 0)
-        for i, ref in enumerate(self.refinement_config.refinement_levels):
-            generator = BorderXGenerator(i+1, self.refinement_config)
-            self.add_velocity_reporter(ref.fine_simulation, generator, time, "border", i+1)
-        return
-
-    def add_linear_velocity_profile_reporter(self):
-        time = self.log.vp_logging_time
-        generator = self.create_linear_x_generator(self.simulation)
-        self.add_velocity_reporter(self.simulation, generator, time, "linear", 0)
-        for i, ref in enumerate(self.refinement_config.refinement_levels):
-            generator = self.create_linear_x_generator(ref.fine_simulation)
-            self.add_velocity_reporter(ref.fine_simulation, generator, time, "linear", i+1)
         return

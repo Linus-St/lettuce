@@ -159,12 +159,12 @@ class BenchmarkCase(ABC):
         x_base = int(2*y_base)
         return [x_base, y_base]
 
-    def add_velocity_reporter(self, simulation, generator, time, profile_name, level):
+    def add_velocity_reporter(self, simulation, generators, time, level):
         time_lu = int(simulation.flow.units.convert_time_to_lu(time))
-        directory = os.path.join(self.directories.get("velocity_profiles"), profile_name, str(level))
+        directory = os.path.join(self.directories.get("velocity_profiles"), str(level))
         diameter = simulation.flow.char_length_lu
         y_len = simulation.flow.resolution[1]
-        reporter = VelocityProfileReporter(directory, diameter, 2, y_len, generator, time_lu)
+        reporter = VelocityProfileReporter(directory, diameter, 2, y_len, generators, time_lu)
         simulation.reporter.append(reporter)
 
     def create_fixed_x_generator(self, simulation):
