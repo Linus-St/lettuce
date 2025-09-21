@@ -36,17 +36,22 @@ def format_avg_to_csv(data, x_vals, y_vals):
     vy_df_csv = vy_df.to_csv(index=True, index_label="y/D")
     return vy_df_csv, vx_df_csv
 
-def plot(csv):
-    df = pd.read_csv(StringIO(csv), index_col=0)
+def plot(file):
+    df = pd.read_csv(file, index_col=0)
     x_d = df.columns.tolist()
     y_d = df.index.tolist()
-    plt.plot(y_d, df[x_d[0]])
-    plt.plot(y_d, df[x_d[1]])
-    plt.plot(y_d, df[x_d[2]])
+    for col in x_d:
+        plt.plot(y_d, df[col], label=col)
+        plt.legend()
+        plt.title(file[-8])
     plt.show()
     return
 
 def main():
+    # for i in range(4):
+    #     file = os.path.join("/home/linus/bachelor/lettuce/data/r1/velocity_profiles", f"{i}_ux.csv")
+    #     plot(file)
+
     directory = sys.argv[1]
     output = sys.argv[2]
     prefix = sys.argv[3]
