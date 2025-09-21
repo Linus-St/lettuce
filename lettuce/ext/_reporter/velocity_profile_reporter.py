@@ -112,7 +112,7 @@ class VelocityProfileReporter(Reporter):
 
     def __call__(self, simulation: 'Simulation'):
         if simulation.flow.i >= self.begin_at:
-            u = simulation.flow.u()
+            u = simulation.flow.u_pu
             y_values = u[:, self.x_indices, self.y_slice]
             self.save(y_values, simulation.flow.i)
         return
