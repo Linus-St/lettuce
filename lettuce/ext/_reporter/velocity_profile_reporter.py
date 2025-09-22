@@ -89,7 +89,7 @@ class VelocityProfileReporter(Reporter):
         self.d = diameter
         #TODO testen ob übereinstimmung mit center of diameter
         self.y_slice, self.y_d = self.setup_y(y_len, y_span, full_range)
-        midpoint = y_len / 2
+        midpoint = (y_len-1) / 2
         x_indices = set()
         for generator in xgenerators:
             x_indices = x_indices.union(set(generator.generate(midpoint)))
