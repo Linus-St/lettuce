@@ -79,7 +79,7 @@ class BorderXGenerator(XGenerator):
 
 class VelocityProfileReporter(Reporter):
 
-    def __init__(self, directory, diameter, y_span, y_len, xgenerators, begin_at, interval=1):
+    def __init__(self, directory, diameter, y_span, y_len, xgenerators, begin_at, full_range, interval=1):
         Reporter.__init__(self, interval)
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -88,7 +88,7 @@ class VelocityProfileReporter(Reporter):
         self.dir_y = os.path.join(self.directory, 'y')
         self.d = diameter
         #TODO testen ob übereinstimmung mit center of diameter
-        self.y_slice, self.y_d = self.setup_y(y_len, y_span)
+        self.y_slice, self.y_d = self.setup_y(y_len, y_span, full_range)
         midpoint = y_len / 2
         x_indices = set()
         for generator in xgenerators:
@@ -100,13 +100,15 @@ class VelocityProfileReporter(Reporter):
         np.savetxt(os.path.join(self.directory, 'y_values'), np.array(self.y_d))
         return
 
-    def setup_y(self, y_len, y_span):
+    def setup_y(self, y_len, y_span, full_span):
         mid = (y_len-1) / 2
         y_diff = self.d * y_span
-        if mid + y_diff < y_len:
+        if full_span:
+            y_slice = slice(None)
+        elif mid + y_diff < y_len:
             y_slice = slice(math.ceil(mid - y_diff), math.floor(mid + y_diff) + 1)
         else:
-            y_slice = slice(0, y_len)
+            y_slice = slice(None)
         y_d = [(i - mid) / self.d for i in range (y_slice.start, y_slice.stop)]
         return y_slice, y_d
 

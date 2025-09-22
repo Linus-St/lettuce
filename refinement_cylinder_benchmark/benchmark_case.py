@@ -10,7 +10,7 @@ from lettuce.ext._reporter.velocity_profile_reporter import VelocityProfileRepor
 
 
 class LoggingConfig:
-    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, velocity_profiles, vp_logging_time, vp_fixed_space, vp_linear_step, checkpoint_interval: int = 10000):
+    def __init__(self, vtk: bool, mlups: bool, drag_lift: bool, velocity_profiles, vp_logging_time, vp_fixed_space, vp_linear_step, vp_full_range, checkpoint_interval: int = 10000):
         self.vtk = vtk
         self.mlups = mlups
         self.drag_lift = drag_lift
@@ -19,6 +19,7 @@ class LoggingConfig:
         self.vp_logging_time = vp_logging_time
         self.vp_fixed_space = vp_fixed_space
         self.vp_linear_step = vp_linear_step
+        self.vp_full_range = vp_full_range
 
 class SimulationParams:
     def __init__(self, steps_coarse, report_steps_coarse, scaling, diameter_finest, ref_levels, space, continue_from, filter):
@@ -115,7 +116,8 @@ class BenchmarkCase(ABC):
         if self.log.checkpoint_interval is not None and self.log.checkpoint_interval > 0:
             self.directories["checkpoint"] = os.path.join(base_dir, "checkpoints")
         if self.log.velocity_profiles is not None:
-            self.directories["velocity_profiles"] = os.path.join(base_dir, "velocity_profiles")
+            name = "velocity_profiles" if self.log.vp_full_range is False else "velocity_profiles_full"
+            self.directories["velocity_profiles"] = os.path.join(base_dir, name)
         return
 
     def create_directories(self):
@@ -164,7 +166,7 @@ class BenchmarkCase(ABC):
         directory = os.path.join(self.directories.get("velocity_profiles"), str(level))
         diameter = simulation.flow.char_length_lu
         y_len = simulation.flow.resolution[1]
-        reporter = VelocityProfileReporter(directory, diameter, 2, y_len, generators, time_lu)
+        reporter = VelocityProfileReporter(directory, diameter, 2, y_len, generators, time_lu, self.log.vp_full_range)
         simulation.reporter.append(reporter)
 
     def create_fixed_x_generator(self, simulation):
