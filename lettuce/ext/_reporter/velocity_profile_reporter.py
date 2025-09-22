@@ -109,7 +109,10 @@ class VelocityProfileReporter(Reporter):
             y_slice = slice(math.ceil(mid - y_diff), math.floor(mid + y_diff) + 1)
         else:
             y_slice = slice(None)
-        y_d = [(i - mid) / self.d for i in range (y_slice.start, y_slice.stop)]
+        if y_slice.stop is not None:
+            y_d = [(i - mid) / self.d for i in range (y_slice.start, y_slice.stop)]
+        else:
+            y_d = [(i - mid) / self.d for i in range (0, y_len)]
         return y_slice, y_d
 
     def __call__(self, simulation: 'Simulation'):
