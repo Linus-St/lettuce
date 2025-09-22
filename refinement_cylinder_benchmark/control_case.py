@@ -20,10 +20,12 @@ class ControlBenchmark(BenchmarkCase):
             checkpointfiles = sorted(os.listdir(os.path.join(self.directories.get("base_dir"), "checkpoints")), key=lambda filename: int(filename[:-3]))
             self.simulation.flow.f = torch.load(os.path.join(self.directories.get("base_dir"), "checkpoints", checkpointfiles[-1]))
             self.simulation.flow.i = int(checkpointfiles[-1][:-3])
+            continued_from = int(checkpointfiles[-1][:-3])
         else:
             self.simulation.flow.f = torch.load(os.path.join(self.directories.get("base_dir"), "checkpoints", f"{continue_from_lu}.pt"))
             self.simulation.flow.i = int(continue_from_lu)
-        return
+            continued_from = int(continue_from_lu)
+        return continued_from
 
     def log_mlups(self, time, steps):
         points = reduce(mul, self.simulation.flow.resolution)
