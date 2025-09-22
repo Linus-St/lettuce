@@ -113,7 +113,7 @@ class BenchmarkCase(ABC):
         self.directories["base_dir"] = base_dir
         if self.log.vtk:
             self.directories["vtk"] = os.path.join(base_dir, "vtk")
-        if self.log.checkpoint_interval is not None and self.log.checkpoint_interval > 0:
+        if (self.log.checkpoint_interval is not None and self.log.checkpoint_interval > 0) or self.simulation_params.continue_from_checkpoint:
             self.directories["checkpoint"] = os.path.join(base_dir, "checkpoints")
         if self.log.velocity_profiles is not None:
             name = "velocity_profiles" if self.log.vp_full_range is False else "velocity_profiles_full"
