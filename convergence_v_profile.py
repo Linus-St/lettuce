@@ -10,7 +10,7 @@ def load_dataset(directory):
     filenames = os.listdir(directory)
     x_values = np.loadtxt(os.path.join(directory, "x_values"))
     y_values = np.loadtxt(os.path.join(directory, "y_values"))
-    filenames = list(filter(lambda f: f.endswith(".pt"), filenames))
+    filenames = sorted(list(filter(lambda f: f.endswith(".pt"), filenames)), key=lambda name: int(name[:-3]))
     sample = torch.load(os.path.join(directory, filenames[0]), map_location=torch.device("cpu"))
     data = np.ndarray((len(filenames), *sample.size()))
 
@@ -18,11 +18,18 @@ def load_dataset(directory):
         data[i] = torch.load(os.path.join(directory, filename), map_location=torch.device("cpu")).numpy()
     return data, x_values, y_values
 
-def rolling_average(data, step_size):
-    avg = list()
-    for i in range(0, len(data), step_size):
-        avg.append(np.mean(data[0:i+step_size], axis=0))
-    return avg
+def rolling_average(data, step_size, output_path):
+    with open(output_path, "a") as f:
+        f.write("avg over first n; total diff to last; max diff to last\n")
+        last_avg = data[0]
+        for i in range(step_size, len(data), step_size):
+            avg = np.mean(data[0:i], axis=0)
+            diff = np.abs(last_avg - avg)
+            total_diff = np.sum(diff)
+            max_diff = np.max(diff)
+            last_avg = avg
+            f.write(f"{i};{total_diff};{max_diff}\n")
+    return
 
 def avg_to_df(data, x_d, y_d):
     x, y = data[0], data[1]
@@ -35,17 +42,11 @@ def df_to_csv(df):
     return csv
 
 def main():
-    directory = sys.argv[0]
-    data, x_d, y_d = load_dataset(directory)
-    step_size = sys.argv[1]
-    avg_list = rolling_average(data, step_size)
-    df_list_y = [avg_to_df(d, x_d, y_d)[1] for d in avg_list]
-    last_value = 1e-100
-    for i, df in enumerate(df_list_y):
-        value = df[x_d[0]].get(y_d[2])
-        diff = abs(value - last_value)
-        print(i*step_size, value, diff, diff/last_value)
-        last_value = value
+    directory = sys.argv[1]
+    step_size = int(sys.argv[2])
+    output_file_path = sys.argv[3]
+    data, _, _ = load_dataset(directory)
+    rolling_average(data, step_size, output_file_path)
     return
 
 if __name__ == "__main__":
