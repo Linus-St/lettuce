@@ -19,16 +19,19 @@ def load_dataset(directory):
     return data, x_values, y_values
 
 def rolling_average(data, step_size, output_path):
+    print("Calculating rolling average...")
+    print(data[0].size)
     with open(output_path, "a") as f:
-        f.write("avg over first n; total diff to last; max diff to last\n")
+        f.write("avg over first n; total; total diff to last; max diff to last\n")
         last_avg = data[0]
         for i in range(step_size, len(data), step_size):
             avg = np.mean(data[0:i], axis=0)
             diff = np.abs(last_avg - avg)
+            total = np.sum(avg)
             total_diff = np.sum(diff)
             max_diff = np.max(diff)
             last_avg = avg
-            f.write(f"{i};{total_diff};{max_diff}\n")
+            f.write(f"{i};{total};{total_diff};{max_diff}\n")
     return
 
 def avg_to_df(data, x_d, y_d):
