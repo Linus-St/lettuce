@@ -32,7 +32,7 @@ def rolling_average(data, step_size, output_path):
             max_diff = np.max(diff)
             last_avg = avg
             f.write(f"{i};{total};{total_diff};{max_diff}\n")
-    return
+    return last_avg
 
 def avg_to_df(data, x_d, y_d):
     x, y = data[0], data[1]
@@ -48,8 +48,13 @@ def main():
     directory = sys.argv[1]
     step_size = int(sys.argv[2])
     output_file_path = sys.argv[3]
-    data, _, _ = load_dataset(directory)
-    rolling_average(data, step_size, output_file_path)
+    data, x_d, y_d = load_dataset(directory)
+    avg = rolling_average(data, step_size, output_file_path)
+    x, y = avg_to_df(avg, x_d, y_d)
+    with open (os.path.join(os.path.dirname(output_file_path), "final_average_x.csv"), "a") as f:
+        f.write(df_to_csv(x))
+    with open (os.path.join(os.path.dirname(output_file_path), "final_average_y.csv"), "a") as f:
+        f.write(df_to_csv(y))
     return
 
 if __name__ == "__main__":
