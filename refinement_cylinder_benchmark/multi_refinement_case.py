@@ -136,7 +136,7 @@ class MultiRefinedBenchmark(BenchmarkCase):
                 if "fixed" in self.log.velocity_profiles:
                     generators.append(self.create_fixed_x_generator(refinement.fine_simulation))
                 if "border" in self.log.velocity_profiles:
-                    generators.append(BorderXGenerator(level, self.refinement_config))
+                    generators.append(BorderXGenerator(level +1 , self.refinement_config))
                 if "linear" in self.log.velocity_profiles:
                     generators.append(self.create_linear_x_generator(refinement.fine_simulation))
                 self.add_velocity_reporter(refinement.fine_simulation, generators, time, level + 1)
