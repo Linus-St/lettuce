@@ -17,7 +17,11 @@ def average_from_numpy(directory):
 def avg_over_pt(directory):
     filenames = os.listdir(directory)
     x_values = np.loadtxt(os.path.join(directory, "x_values"))
-    y_values = np.loadtxt(os.path.join(directory, "y_values"))
+    #this happens for files containing a single value
+    if x_values.shape == ():
+        x_values = np.array([x_values.tolist()])
+    x_values = x_values.tolist()
+    y_values = np.loadtxt(os.path.join(directory, "y_values")).tolist()
     filenames = list(filter(lambda f: f.endswith(".pt"), filenames))
     sample = torch.load(os.path.join(directory, filenames[0]), map_location=torch.device("cpu"))
     data = np.ndarray((len(filenames), *sample.size()))
@@ -29,10 +33,10 @@ def avg_over_pt(directory):
 
 def format_avg_to_csv(data, x_vals, y_vals):
     x, y = data[0], data[1]
-    vx_df = pd.DataFrame(np.transpose(x), index=y_vals, columns=list(x_vals))
+    vx_df = pd.DataFrame(np.transpose(x), index=y_vals, columns=x_vals)
     vx_df_csv = vx_df.to_csv(index=True, index_label="y/D")
 
-    vy_df = pd.DataFrame(np.transpose(y), index=y_vals, columns=list(x_vals))
+    vy_df = pd.DataFrame(np.transpose(y), index=y_vals, columns=x_vals)
     vy_df_csv = vy_df.to_csv(index=True, index_label="y/D")
     return vy_df_csv, vx_df_csv
 
