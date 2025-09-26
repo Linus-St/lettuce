@@ -57,7 +57,7 @@ class BorderXGenerator(XGenerator):
 
     def generate(self, midpoint):
         if self.level == 0:
-            return tuple(map(lambda x: x+1, self.x_border_level_0))
+            return tuple(map(lambda x: x, self.x_border_level_0))
         else:
             def border_to_fine(x):
                 transformed = self.refinement_config.transform_x_to_finer_level(x, self.level)
