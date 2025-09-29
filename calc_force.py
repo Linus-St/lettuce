@@ -119,8 +119,9 @@ def drag_lift_dir_to_csv(directory):
     for test in tests:
         drag, lift = calculate(os.path.join(directory, test, "drag_lift.csv"), 100)
         results.append([int(test[1:]), drag, lift])
+            results.append([float(test[1:]), drag, lift])
     results = sorted(results, key=lambda x: x[0])
-    csv = pd.DataFrame(np.array(results)).to_csv(index=False, header=False)
+    csv = pd.DataFrame(np.array(results)).to_csv(index=False, header=False, sep=",")
     return csv
 
 def main():
